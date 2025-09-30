@@ -1,0 +1,399 @@
+syntax = "proto3";
+
+package inference;
+
+// Inference Server GRPC endpoints.
+service GRPCInferenceService {
+  // Check liveness of the inference server.
+  rpc ServerLive(ServerLiveRequest) returns (ServerLiveResponse) {}
+
+  // Check readiness of the inference server.
+  rpc ServerReady(ServerReadyRequest) returns (ServerReadyResponse) {}
+
+  // Check readiness of a specific model.
+  rpc ModelReady(ModelReadyRequest) returns (ModelReadyResponse) {}
+
+  // Get server metadata.
+  rpc ServerMetadata(ServerMetadataRequest) returns (ServerMetadataResponse) {}
+
+  // Get model metadata.
+  rpc ModelMetadata(ModelMetadataRequest) returns (ModelMetadataResponse) {}
+
+  // Get model configuration.
+  rpc ModelConfig(ModelConfigRequest) returns (ModelConfigResponse) {}
+
+  // Get model statistics.
+  rpc ModelStatistics(ModelStatisticsRequest) returns (ModelStatisticsResponse) {}
+
+  // Get system shared memory status.
+  rpc SystemSharedMemoryStatus(SystemSharedMemoryStatusRequest) returns (SystemSharedMemoryStatusResponse) {}
+
+  // Register system shared memory.
+  rpc SystemSharedMemoryRegister(SystemSharedMemoryRegisterRequest) returns (SystemSharedMemoryRegisterResponse) {}
+
+  // Unregister system shared memory.
+  rpc SystemSharedMemoryUnregister(SystemSharedMemoryUnregisterRequest) returns (SystemSharedMemoryUnregisterResponse) {}
+
+  // Get CUDA shared memory status.
+  rpc CudaSharedMemoryStatus(CudaSharedMemoryStatusRequest) returns (CudaSharedMemoryStatusResponse) {}
+
+  // Register CUDA shared memory.
+  rpc CudaSharedMemoryRegister(CudaSharedMemoryRegisterRequest) returns (CudaSharedMemoryRegisterResponse) {}
+
+  // Unregister CUDA shared memory.
+  rpc CudaSharedMemoryUnregister(CudaSharedMemoryUnregisterRequest) returns (CudaSharedMemoryUnregisterResponse) {}
+
+  // Run inference using the specified model.
+  rpc ModelInfer(ModelInferRequest) returns (ModelInferResponse) {}
+
+  // Get model statistics.
+  rpc ModelStreamInfer(stream ModelStreamInferRequest) returns (stream ModelStreamInferResponse) {}
+}
+
+// Request message for ServerLive.
+message ServerLiveRequest {}
+
+// Response message for ServerLive.
+message ServerLiveResponse {
+  // True if the inference server is live, false if not live.
+  bool live = 1;
+}
+
+// Request message for ServerReady.
+message ServerReadyRequest {}
+
+// Response message for ServerReady.
+message ServerReadyResponse {
+  // True if the inference server is ready, false if not ready.
+  bool ready = 1;
+}
+
+// Request message for ModelReady.
+message ModelReadyRequest {
+  // The name of the model to check for readiness.
+  string name = 1;
+  // The version of the model to check for readiness. If not given the
+  // server will choose a version based on the model and internal policy.
+  string version = 2;
+}
+
+// Response message for ModelReady.
+message ModelReadyResponse {
+  // True if the model is ready, false if not ready.
+  bool ready = 1;
+}
+
+// Request message for ServerMetadata.
+message ServerMetadataRequest {}
+
+// Response message for ServerMetadata.
+message ServerMetadataResponse {
+  // The server name.
+  string name = 1;
+  // The server version.
+  string version = 2;
+  // The extensions supported by the server.
+  repeated string extensions = 3;
+}
+
+// Request message for ModelMetadata.
+message ModelMetadataRequest {
+  // The name of the model.
+  string name = 1;
+  // The version of the model to get metadata. If not given the
+  // server will choose a version based on the model and internal policy.
+  string version = 2;
+}
+
+// Response message for ModelMetadata.
+message ModelMetadataResponse {
+  // The model name.
+  string name = 1;
+  // The versions of the model.
+  repeated string versions = 2;
+  // The model's platform.
+  string platform = 3;
+  // The model's inputs.
+  repeated ModelMetadataResponse_TensorMetadata inputs = 4;
+  // The model's outputs.
+  repeated ModelMetadataResponse_TensorMetadata outputs = 5;
+}
+
+// Metadata for a tensor.
+message ModelMetadataResponse_TensorMetadata {
+  // The tensor name.
+  string name = 1;
+  // The tensor data type.
+  string datatype = 2;
+  // The tensor shape. A variable-size dimension is represented
+  // by a -1 value.
+  repeated int64 shape = 3;
+}
+
+// Request message for ModelConfig.
+message ModelConfigRequest {
+  // The name of the model.
+  string name = 1;
+  // The version of the model to get configuration. If not given the
+  // server will choose a version based on the model and internal policy.
+  string version = 2;
+}
+
+// Response message for ModelConfig.
+message ModelConfigResponse {
+  // The model configuration.
+  string config = 1;
+}
+
+// Request message for ModelStatistics.
+message ModelStatisticsRequest {
+  // The name of the model. If not given returns statistics for
+  // all models.
+  string name = 1;
+  // The version of the model to get statistics. If not given the
+  // server will choose a version based on the model and internal policy.
+  string version = 2;
+}
+
+// Response message for ModelStatistics.
+message ModelStatisticsResponse {
+  // The model statistics.
+  repeated ModelStatistics model_stats = 1;
+}
+
+// Statistics for a model.
+message ModelStatistics {
+  // The model name.
+  string name = 1;
+  // The model version.
+  string version = 2;
+  // The last time the model was loaded.
+  uint64 last_inference = 3;
+  // The cumulative count of successful inference requests.
+  uint64 inference_count = 4;
+  // The cumulative count of the number of successful inference
+  // requests that were batched into this response.
+  uint64 execution_count = 5;
+  // The cumulative inference time.
+  uint64 inference_duration_ns = 6;
+  // The cumulative queue time.
+  uint64 queue_duration_ns = 7;
+}
+
+// Request message for SystemSharedMemoryStatus.
+message SystemSharedMemoryStatusRequest {
+  // The name of the region to get status for. If empty the
+  // status is returned for all regions.
+  string name = 1;
+}
+
+// Response message for SystemSharedMemoryStatus.
+message SystemSharedMemoryStatusResponse {
+  // Map of region name to the system shared memory status.
+  map<string, SystemSharedMemoryStatusResponse_RegionStatus> regions = 1;
+}
+
+// Status for a system shared memory region.
+message SystemSharedMemoryStatusResponse_RegionStatus {
+  // The name for the shared memory region.
+  string name = 1;
+  // The key of the shared memory region.
+  string key = 2;
+  // The size of the shared memory region, in bytes.
+  uint64 size = 3;
+  // The offset of the shared memory region.
+  uint64 offset = 4;
+}
+
+// Request message for SystemSharedMemoryRegister.
+message SystemSharedMemoryRegisterRequest {
+  // The name of the region to register.
+  string name = 1;
+  // The key of the underlying memory object that contains the
+  // shared memory region.
+  string key = 2;
+  // The offset of the shared memory region in the underlying memory
+  // object.
+  uint64 offset = 3;
+  // The size of the shared memory region, in bytes.
+  uint64 byte_size = 4;
+}
+
+// Response message for SystemSharedMemoryRegister.
+message SystemSharedMemoryRegisterResponse {}
+
+// Request message for SystemSharedMemoryUnregister.
+message SystemSharedMemoryUnregisterRequest {
+  // The name of the region to unregister. If empty
+  // all regions are unregistered.
+  string name = 1;
+}
+
+// Response message for SystemSharedMemoryUnregister.
+message SystemSharedMemoryUnregisterResponse {}
+
+// Request message for CudaSharedMemoryStatus.
+message CudaSharedMemoryStatusRequest {
+  // The name of the region to get status for. If empty the
+  // status is returned for all regions.
+  string name = 1;
+}
+
+// Response message for CudaSharedMemoryStatus.
+message CudaSharedMemoryStatusResponse {
+  // Map of region name to the CUDA shared memory status.
+  map<string, CudaSharedMemoryStatusResponse_RegionStatus> regions = 1;
+}
+
+// Status for a CUDA shared memory region.
+message CudaSharedMemoryStatusResponse_RegionStatus {
+  // The name for the shared memory region.
+  string name = 1;
+  // The device id of the CUDA IPC handle.
+  int64 device_id = 2;
+  // The CUDA IPC handle.
+  bytes cuda_ipc_handle = 3;
+  // The size of the shared memory region, in bytes.
+  uint64 byte_size = 4;
+}
+
+// Request message for CudaSharedMemoryRegister.
+message CudaSharedMemoryRegisterRequest {
+  // The name of the region to register.
+  string name = 1;
+  // The raw serialized CUDA IPC handle.
+  bytes raw_handle = 2;
+  // The device id of the CUDA IPC handle.
+  int64 device_id = 3;
+  // The size of the shared memory region, in bytes.
+  uint64 byte_size = 4;
+}
+
+// Response message for CudaSharedMemoryRegister.
+message CudaSharedMemoryRegisterResponse {}
+
+// Request message for CudaSharedMemoryUnregister.
+message CudaSharedMemoryUnregisterRequest {
+  // The name of the region to unregister. If empty
+  // all regions are unregistered.
+  string name = 1;
+}
+
+// Response message for CudaSharedMemoryUnregister.
+message CudaSharedMemoryUnregisterResponse {}
+
+// Request message for ModelInfer.
+message ModelInferRequest {
+  // The name of the model to use for inferencing.
+  string model_name = 1;
+  // The version of the model to use for inferencing. If not given the
+  // server will choose a version based on the model and internal policy.
+  string model_version = 2;
+  // The identifier for the request. If not given the server will
+  // generate a random identifier.
+  string id = 3;
+  // Optional inference parameters.
+  map<string, InferParameter> parameters = 4;
+  // The input tensors.
+  repeated InferInputTensor inputs = 5;
+  // The requested output tensors.
+  repeated InferRequestedOutputTensor outputs = 6;
+  // The data contained in the input tensors.
+  repeated bytes raw_input_contents = 7;
+}
+
+// Response message for ModelInfer.
+message ModelInferResponse {
+  // The name of the model used for inference.
+  string model_name = 1;
+  // The version of the model used for inference.
+  string model_version = 2;
+  // The id of the request.
+  string id = 3;
+  // Optional inference parameters.
+  map<string, InferParameter> parameters = 4;
+  // The output tensors.
+  repeated InferOutputTensor outputs = 5;
+  // The data contained in the output tensors.
+  repeated bytes raw_output_contents = 6;
+}
+
+// Request message for ModelStreamInfer.
+message ModelStreamInferRequest {
+  // The name of the model to use for inferencing.
+  string model_name = 1;
+  // The version of the model to use for inferencing. If not given the
+  // server will choose a version based on the model and internal policy.
+  string model_version = 2;
+  // The identifier for the request. If not given the server will
+  // generate a random identifier.
+  string id = 3;
+  // Optional inference parameters.
+  map<string, InferParameter> parameters = 4;
+  // The input tensors.
+  repeated InferInputTensor inputs = 5;
+  // The requested output tensors.
+  repeated InferRequestedOutputTensor outputs = 6;
+  // The data contained in the input tensors.
+  repeated bytes raw_input_contents = 7;
+}
+
+// Response message for ModelStreamInfer.
+message ModelStreamInferResponse {
+  // The name of the model used for inference.
+  string model_name = 1;
+  // The version of the model used for inference.
+  string model_version = 2;
+  // The id of the request.
+  string id = 3;
+  // Optional inference parameters.
+  map<string, InferParameter> parameters = 4;
+  // The output tensors.
+  repeated InferOutputTensor outputs = 5;
+  // The data contained in the output tensors.
+  repeated bytes raw_output_contents = 6;
+}
+
+// An input tensor for an inference request.
+message InferInputTensor {
+  // The tensor name.
+  string name = 1;
+  // The tensor data type.
+  string datatype = 2;
+  // The tensor shape.
+  repeated int64 shape = 3;
+  // Optional inference parameters.
+  map<string, InferParameter> parameters = 4;
+}
+
+// An output tensor for an inference request.
+message InferRequestedOutputTensor {
+  // The tensor name.
+  string name = 1;
+  // Optional inference parameters.
+  map<string, InferParameter> parameters = 2;
+}
+
+// An output tensor for an inference response.
+message InferOutputTensor {
+  // The tensor name.
+  string name = 1;
+  // The tensor data type.
+  string datatype = 2;
+  // The tensor shape.
+  repeated int64 shape = 3;
+  // Optional inference parameters.
+  map<string, InferParameter> parameters = 4;
+}
+
+// An inference parameter value.
+message InferParameter {
+  // The parameter value can be a string, an int64, a boolean
+  // or a double.
+  oneof parameter_choice {
+    bool bool_param = 1;
+    int64 int64_param = 2;
+    string string_param = 3;
+    double double_param = 4;
+  }
+}
