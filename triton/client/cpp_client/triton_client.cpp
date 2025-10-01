@@ -466,10 +466,10 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
                 read_cv.wait(lock, [&]() { return read_queue.size() < queue_size; });
                 read_queue.push({frame.clone(), idx, frame.cols, frame.rows});
                 idx++;
+                frames_read = idx;  // Update incrementally for progress display
             }
             read_cv.notify_one();
         }
-        frames_read = idx;
         reading_done = true;
         read_cv.notify_all();
     });
@@ -541,11 +541,11 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
             {
                 std::unique_lock<std::mutex> lock(inference_mutex);
                 inference_cv.wait(lock, [&]() { 
-                    return !inference_queue.empty() || 
-                           (preprocessing_done && preprocess_queue.empty()); 
+                    return !inference_queue.empty() || inference_done; 
                 });
                 
-                if (inference_queue.empty() && preprocessing_done && preprocess_queue.empty()) {
+                // Exit when all inference workers are done AND queue is empty AND buffer is empty
+                if (inference_queue.empty() && inference_done && buffer.empty()) {
                     break;
                 }
                 if (inference_queue.empty()) continue;
@@ -594,6 +594,29 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
                 buffer.erase(expected_frame);
                 expected_frame++;
             }
+        }
+        
+        // Process any remaining frames in buffer (shouldn't happen, but safety check)
+        while (buffer.count(expected_frame)) {
+            auto& res = buffer[expected_frame];
+            cv::Mat frame = res.frame.clone();
+            for (const auto& det : res.detections) {
+                if (det.confidence < config_.model.draw_confidence) continue;
+                std::string class_name = (det.class_id < static_cast<int>(class_names_.size()))
+                                       ? class_names_[det.class_id]
+                                       : "class_" + std::to_string(det.class_id);
+                draw_detection(frame, det.class_id, class_name, det.confidence,
+                             static_cast<int>(det.x1), static_cast<int>(det.y1),
+                             static_cast<int>(det.x2), static_cast<int>(det.y2),
+                             config_.video.line_thickness, config_.video.font_scale,
+                             config_.video.font_thickness);
+            }
+            if (writer.isOpened()) {
+                writer.write(frame);
+            }
+            frames_processed++;
+            buffer.erase(expected_frame);
+            expected_frame++;
         }
     });
     
