@@ -193,7 +193,6 @@ std::vector<float> GrpcClient::run_inference(const std::string& model_name,
             output_data.resize(raw_output.size() / sizeof(float));
             std::memcpy(output_data.data(), raw_output.data(), raw_output.size());
             
-            std::cout << "✅ Real inference from Triton! Output size: " << output_data.size() << std::endl;
             return output_data;
         }
         

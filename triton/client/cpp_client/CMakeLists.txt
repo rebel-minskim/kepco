@@ -22,6 +22,7 @@ set(SOURCES
     triton_client.cpp
     utils.cpp
     grpc_client.cpp
+    yolo_preprocess.cpp
     yolo_postprocess.cpp
     grpc_service.pb.cc
     grpc_service.grpc.pb.cc

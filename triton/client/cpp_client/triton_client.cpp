@@ -8,6 +8,10 @@
 #include <cmath>
 #include <sstream>
 #include <iomanip>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include <opencv2/imgproc.hpp>
 
 namespace triton_client {
@@ -15,6 +19,10 @@ namespace triton_client {
 TritonClient::TritonClient(const ClientConfig& config) : config_(config) {
     load_class_names();
     grpc_client_ = std::make_unique<GrpcClient>(config_.server.url);
+    yolo_preprocessor_ = std::make_unique<YoloPreprocessor>(
+        config_.model.input_width, 
+        config_.model.input_height
+    );
     yolo_postprocessor_ = std::make_unique<YoloPostprocessor>(9);  // 9 classes
 }
 
@@ -142,107 +150,9 @@ void TritonClient::run_dummy_inference() {
 }
 
 std::vector<float> TritonClient::prepare_input_tensor(const cv::Mat& image) {
-    // LetterBox implementation matching Ultralytics exactly
-    // Reference: ultralytics.data.augment.LetterBox
-    
-    int target_w = config_.model.input_width;
-    int target_h = config_.model.input_height;
-    int shape_h = image.rows;  // current shape [height, width]
-    int shape_w = image.cols;
-    
-    // Scale ratio (new / old)
-    // r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-    float r = std::min(static_cast<float>(target_h) / shape_h, 
-                       static_cast<float>(target_w) / shape_w);
-    
-    // scaleup=True by default (allow scaling up)
-    // If scaleup=False: r = min(r, 1.0) - only scale down
-    
-    // Compute new unpadded size
-    // new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))  # (width, height)
-    int new_unpad_w = static_cast<int>(std::round(shape_w * r));
-    int new_unpad_h = static_cast<int>(std::round(shape_h * r));
-    
-    // Compute padding
-    // dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]
-    float dw = target_w - new_unpad_w;  // width padding
-    float dh = target_h - new_unpad_h;  // height padding
-    
-    // auto=False, scale_fill=False by default
-    // If auto=True: dw, dh = np.mod(dw, stride), np.mod(dh, stride)
-    // If scale_fill=True: dw, dh = 0.0, 0.0
-    
-    // center=True by default (divide padding into 2 sides)
-    dw /= 2.0f;
-    dh /= 2.0f;
-    
-    // Resize if shape doesn't match
-    cv::Mat resized;
-    if (shape_h != new_unpad_h || shape_w != new_unpad_w) {
-        // interpolation=cv2.INTER_LINEAR by default
-        cv::resize(image, resized, cv::Size(new_unpad_w, new_unpad_h), 0, 0, cv::INTER_LINEAR);
-    } else {
-        resized = image.clone();
-    }
-    
-    // Calculate border values
-    // top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1)) if center else 0, int(round(dh))
-    // left, right = int(round(dw - 0.1)), int(round(dw + 0.1)) if center else 0, int(round(dw))
-    int top = static_cast<int>(std::round(dh - 0.1f));
-    int bottom = static_cast<int>(std::round(dh + 0.1f));
-    int left = static_cast<int>(std::round(dw - 0.1f));
-    int right = static_cast<int>(std::round(dw + 0.1f));
-    
-    // Add border with padding_value=114 (gray)
-    cv::Mat padded;
-    cv::copyMakeBorder(resized, padded, top, bottom, left, right, 
-                       cv::BORDER_CONSTANT, cv::Scalar(114, 114, 114));
-    
-    // Normalize to [0, 1]
-    cv::Mat float_img;
-    padded.convertTo(float_img, CV_32F, 1.0 / 255.0);
-    
-    // Transpose from HWC to CHW format
-    // Python: img = img.transpose((2, 0, 1))[::-1]
-    // transpose((2, 0, 1)) converts HWC to CHW
-    // [::-1] reverses the first dimension (channels), so [R,G,B] becomes [B,G,R]
-    std::vector<cv::Mat> channels(3);
-    cv::split(float_img, channels);  // Split into [B, G, R] (OpenCV is BGR)
-    
-    // Flatten in CHW order: B, G, R (which matches [::-1] on RGB)
-    std::vector<float> tensor;
-    tensor.reserve(float_img.total() * 3);
-    
-    // OpenCV channels are in BGR order: [0]=B, [1]=G, [2]=R
-    // Python does RGB[::-1] which gives BGR
-    // So we want BGR order: channels[0], channels[1], channels[2]
-    for (int i = 2; i >= 0; --i) {  // Reverse: R, G, B -> matches [::-1]
-        tensor.insert(tensor.end(), (float*)channels[i].data, 
-                     (float*)channels[i].data + channels[i].total());
-    }
-    
-    // Debug output (once)
-    static bool print_debug = true;
-    if (print_debug) {
-        print_debug = false;
-        std::cout << "\n=== LETTERBOX DEBUG ===" << std::endl;
-        std::cout << "Original shape: [" << shape_h << ", " << shape_w << "]" << std::endl;
-        std::cout << "Scale ratio (r): " << r << std::endl;
-        std::cout << "New unpadded: [" << new_unpad_h << ", " << new_unpad_w << "]" << std::endl;
-        std::cout << "Padding (dw, dh): (" << dw << ", " << dh << ")" << std::endl;
-        std::cout << "Border (top, bottom, left, right): (" << top << ", " << bottom 
-                  << ", " << left << ", " << right << ")" << std::endl;
-        std::cout << "Final shape: [" << padded.rows << ", " << padded.cols << "]" << std::endl;
-        std::cout << "Tensor size: " << tensor.size() << " (expected: " 
-                  << (3 * target_h * target_w) << ")" << std::endl;
-        std::cout << "First 10 values: ";
-        for (int i = 0; i < 10 && i < static_cast<int>(tensor.size()); ++i) {
-            std::cout << std::fixed << std::setprecision(5) << tensor[i] << " ";
-        }
-        std::cout << "\n=== END LETTERBOX DEBUG ===\n" << std::endl;
-    }
-    
-    return tensor;
+    // Use YoloPreprocessor for LetterBox preprocessing
+    // This is now a thin wrapper around the dedicated preprocessor class
+    return yolo_preprocessor_->preprocess(image);
 }
 
 std::vector<Detection> TritonClient::run_inference(const std::vector<float>& input_tensor,
@@ -473,6 +383,246 @@ void TritonClient::process_video_frame(cv::Mat& frame, PerformanceStats& stats,
     // Update performance stats
     stats.add_measurement(e2e_latency, preprocess_latency, inference_latency,
                          postprocess_latency, frame_time, static_cast<int>(detections.size()));
+}
+
+// Parallel video inference with multi-threaded pipeline
+void TritonClient::run_video_inference_parallel(const std::string& video_path, 
+                                               const std::string& output_path,
+                                               int num_threads) {
+    std::cout << "Processing video (PARALLEL): " << video_path << std::endl;
+    std::cout << "Using " << num_threads << " inference threads" << std::endl;
+    
+    // Thread-safe queues
+    struct FrameData {
+        cv::Mat frame;
+        int frame_idx;
+        int orig_width;
+        int orig_height;
+    };
+    
+    struct PreprocessedData {
+        std::vector<float> tensor;
+        cv::Mat frame;  // Keep frame for drawing later
+        int frame_idx;
+        int orig_width;
+        int orig_height;
+    };
+    
+    struct InferenceResult {
+        std::vector<Detection> detections;
+        cv::Mat frame;  // Frame with detections
+        int frame_idx;
+    };
+    
+    std::queue<FrameData> read_queue;
+    std::queue<PreprocessedData> preprocess_queue;
+    std::queue<InferenceResult> inference_queue;
+    std::queue<std::pair<cv::Mat, std::vector<Detection>>> draw_queue;
+    
+    std::mutex read_mutex, preprocess_mutex, inference_mutex, draw_mutex;
+    std::condition_variable read_cv, preprocess_cv, inference_cv, draw_cv;
+    
+    std::atomic<bool> reading_done{false};
+    std::atomic<bool> preprocessing_done{false};
+    std::atomic<bool> inference_done{false};
+    std::atomic<int> frames_read{0};
+    std::atomic<int> frames_processed{0};
+    
+    const int queue_size = num_threads * 2;
+    
+    cv::VideoCapture cap(video_path);
+    if (!cap.isOpened()) {
+        std::cerr << "Failed to open video: " << video_path << std::endl;
+        return;
+    }
+    
+    int frame_width = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH));
+    int frame_height = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT));
+    double fps = cap.get(cv::CAP_PROP_FPS);
+    int total_frames = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_COUNT));
+    
+    std::cout << "Video: " << frame_width << "x" << frame_height 
+              << " @ " << fps << " FPS, " << total_frames << " frames" << std::endl;
+    
+    cv::VideoWriter writer;
+    if (!output_path.empty()) {
+        int fourcc = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
+        writer.open(output_path, fourcc, fps, cv::Size(frame_width, frame_height));
+        if (!writer.isOpened()) {
+            std::cerr << "Failed to create video writer" << std::endl;
+            return;
+        }
+    }
+    
+    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    // Thread 1: Read frames
+    std::thread reader([&]() {
+        cv::Mat frame;
+        int idx = 0;
+        while (cap.read(frame)) {
+            {
+                std::unique_lock<std::mutex> lock(read_mutex);
+                read_cv.wait(lock, [&]() { return read_queue.size() < queue_size; });
+                read_queue.push({frame.clone(), idx, frame.cols, frame.rows});
+                idx++;
+            }
+            read_cv.notify_one();
+        }
+        frames_read = idx;
+        reading_done = true;
+        read_cv.notify_all();
+    });
+    
+    // Thread 2: Preprocess
+    std::thread preprocessor([&]() {
+        while (true) {
+            FrameData data;
+            {
+                std::unique_lock<std::mutex> lock(read_mutex);
+                read_cv.wait(lock, [&]() { return !read_queue.empty() || reading_done; });
+                if (read_queue.empty() && reading_done) break;
+                if (read_queue.empty()) continue;
+                
+                data = std::move(read_queue.front());
+                read_queue.pop();
+            }
+            read_cv.notify_one();
+            
+            auto tensor = prepare_input_tensor(data.frame);
+            
+            {
+                std::unique_lock<std::mutex> lock(preprocess_mutex);
+                preprocess_cv.wait(lock, [&]() { return preprocess_queue.size() < queue_size; });
+                preprocess_queue.push({std::move(tensor), data.frame, data.frame_idx, data.orig_width, data.orig_height});
+            }
+            preprocess_cv.notify_one();
+        }
+        preprocessing_done = true;
+        preprocess_cv.notify_all();
+    });
+    
+    // Threads 3-N: Inference workers
+    std::vector<std::thread> inference_workers;
+    for (int i = 0; i < num_threads; ++i) {
+        inference_workers.emplace_back([&]() {
+            while (true) {
+                PreprocessedData data;
+                {
+                    std::unique_lock<std::mutex> lock(preprocess_mutex);
+                    preprocess_cv.wait(lock, [&]() { return !preprocess_queue.empty() || preprocessing_done; });
+                    if (preprocess_queue.empty() && preprocessing_done) break;
+                    if (preprocess_queue.empty()) continue;
+                    
+                    data = std::move(preprocess_queue.front());
+                    preprocess_queue.pop();
+                }
+                preprocess_cv.notify_one();
+                
+                auto detections = run_inference(data.tensor, data.orig_width, data.orig_height);
+                
+                {
+                    std::unique_lock<std::mutex> lock(inference_mutex);
+                    inference_cv.wait(lock, [&]() { return inference_queue.size() < queue_size * 2; });
+                    inference_queue.push({std::move(detections), data.frame, data.frame_idx});
+                }
+                inference_cv.notify_one();
+            }
+        });
+    }
+    
+    // Thread N+1: Draw and write (must be sequential for video output)
+    std::thread drawer([&]() {
+        int expected_frame = 0;
+        std::map<int, InferenceResult> buffer;
+        
+        while (true) {
+            InferenceResult result;
+            {
+                std::unique_lock<std::mutex> lock(inference_mutex);
+                inference_cv.wait(lock, [&]() { 
+                    return !inference_queue.empty() || 
+                           (preprocessing_done && preprocess_queue.empty()); 
+                });
+                
+                if (inference_queue.empty() && preprocessing_done && preprocess_queue.empty()) {
+                    break;
+                }
+                if (inference_queue.empty()) continue;
+                
+                result = std::move(inference_queue.front());
+                inference_queue.pop();
+            }
+            inference_cv.notify_one();
+            
+            buffer[result.frame_idx] = std::move(result);
+            
+            // Process frames in order
+            while (buffer.count(expected_frame)) {
+                auto& res = buffer[expected_frame];
+                
+                // Draw detections on the frame we already have
+                cv::Mat frame = res.frame.clone();
+                for (const auto& det : res.detections) {
+                    if (det.confidence < config_.model.draw_confidence) continue;
+                    
+                    std::string class_name = (det.class_id < static_cast<int>(class_names_.size()))
+                                           ? class_names_[det.class_id]
+                                           : "class_" + std::to_string(det.class_id);
+                    
+                    draw_detection(frame, det.class_id, class_name, det.confidence,
+                                 static_cast<int>(det.x1), static_cast<int>(det.y1),
+                                 static_cast<int>(det.x2), static_cast<int>(det.y2),
+                                 config_.video.line_thickness, config_.video.font_scale,
+                                 config_.video.font_thickness);
+                }
+                
+                if (writer.isOpened()) {
+                    writer.write(frame);
+                }
+                
+                frames_processed++;
+                if (frames_processed % 30 == 0) {
+                    auto elapsed = std::chrono::duration<float>(
+                        std::chrono::high_resolution_clock::now() - start_time).count();
+                    float current_fps = frames_processed / elapsed;
+                    std::cout << "Processed " << frames_processed << "/" << frames_read 
+                              << " frames | FPS: " << std::fixed << std::setprecision(2) 
+                              << current_fps << std::endl;
+                }
+                
+                buffer.erase(expected_frame);
+                expected_frame++;
+            }
+        }
+    });
+    
+    // Wait for all threads
+    reader.join();
+    preprocessor.join();
+    for (auto& worker : inference_workers) {
+        worker.join();
+    }
+    inference_done = true;
+    inference_cv.notify_all();
+    drawer.join();
+    
+    auto end_time = std::chrono::high_resolution_clock::now();
+    float total_time = std::chrono::duration<float>(end_time - start_time).count();
+    
+    std::cout << "\n============================================================" << std::endl;
+    std::cout << "PARALLEL PROCESSING SUMMARY" << std::endl;
+    std::cout << "============================================================" << std::endl;
+    std::cout << "Total frames: " << frames_processed << std::endl;
+    std::cout << "Total time: " << std::fixed << std::setprecision(2) << total_time << "s" << std::endl;
+    std::cout << "Average FPS: " << std::fixed << std::setprecision(2) 
+              << (frames_processed / total_time) << std::endl;
+    std::cout << "Inference threads: " << num_threads << std::endl;
+    std::cout << "============================================================" << std::endl;
+    
+    if (writer.isOpened()) {
+        writer.release();
+    }
 }
 
 } // namespace triton_client
