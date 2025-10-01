@@ -63,35 +63,182 @@ Thread N+1: Drawer & Writer (sequential for frame order)
 
 ## 🚀 Usage
 
-### Build
+### Prerequisites
+
+#### Ubuntu/Debian
 
 ```bash
+# Install build dependencies
+sudo apt update
+sudo apt install -y \
+    build-essential \
+    cmake \
+    pkg-config \
+    libgrpc++-dev \
+    libprotobuf-dev \
+    protobuf-compiler-grpc \
+    libopencv-dev
+
+# Install runtime dependencies (if not using -dev packages)
+sudo apt install -y \
+    libgrpc++1.51 \
+    libprotobuf32 \
+    libopencv-core4.6 \
+    libopencv-highgui4.6 \
+    libopencv-videoio4.6 \
+    libopencv-imgcodecs4.6 \
+    libopencv-imgproc4.6
+```
+
+#### CentOS/RHEL
+
+```bash
+sudo yum install -y \
+    gcc-c++ \
+    cmake \
+    pkgconfig \
+    grpc-devel \
+    protobuf-devel \
+    opencv-devel
+```
+
+### Build
+
+#### Quick Build (Release Mode)
+
+```bash
+cd /workspace/kepco/triton/client/cpp_client
 ./build.sh
+```
+
+This will:
+1. Check for required dependencies (CMake, OpenCV, gRPC, Protobuf)
+2. Generate build files with CMake
+3. Compile with optimizations (`-O3 -march=native`)
+4. Create executable at `./build/bin/triton_client`
+
+#### Build Options
+
+```bash
+# Clean build (remove old build files)
+./build.sh --clean
+
+# Debug build (with debug symbols)
+./build.sh --debug
+
+# Verbose output
+./build.sh --verbose
+
+# Custom number of parallel jobs
+./build.sh --jobs 8
+
+# Check dependencies only
+./build.sh --check-deps
+```
+
+#### Manual Build
+
+```bash
+mkdir -p build && cd build
+
+# Configure
+cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_STANDARD=17 \
+  -DCMAKE_CXX_FLAGS="-O3 -march=native"
+
+# Build
+make -j$(nproc)
+
+# Executable will be at: build/bin/triton_client
+```
+
+#### Verify Build
+
+```bash
+# Check linked libraries
+ldd ./build/bin/triton_client
+
+# All libraries should be found (no "not found" messages)
 ```
 
 Requirements:
 - CMake 3.10+
 - OpenCV 4.x
-- gRPC & Protobuf
-- C++17 compiler
+- gRPC 1.51+ & Protobuf 3.21+
+- C++17 compiler (GCC 7+, Clang 5+)
 
 ### Run
 
+#### Before Running
+
+1. **Start Triton Server** (if not already running):
 ```bash
-# Test with synthetic data
+# Check server status
+curl localhost:8000/v2/health/ready
+
+# Check model is loaded
+curl localhost:8000/v2/models/yolov11
+```
+
+2. **Prepare test data**:
+```bash
+# Use provided test videos
+ls ../media/1.mp4        # Short test video (440 frames)
+ls 30sec.mp4             # Full test video (900 frames)
+```
+
+#### Usage Modes
+
+```bash
+cd /workspace/kepco/triton/client/cpp_client
+
+# 1. Test connection with synthetic data (no video file needed)
 ./build/bin/triton_client dummy
 
-# Single image inference
+# 2. Single image inference
 ./build/bin/triton_client image input.jpg output.jpg
 
-# Single-threaded video (35 FPS)
+# 3. Single-threaded video processing (~35 FPS)
 ./build/bin/triton_client video input.mp4 output.mp4
 
-# Multi-threaded video (88 FPS, 4 threads)
+# 4. Multi-threaded parallel processing (recommended, ~90 FPS)
 ./build/bin/triton_client parallel input.mp4 output.mp4 4
+#                                   ^        ^           ^
+#                                   mode    input       threads
+```
 
-# Multi-threaded video (6 threads)
-./build/bin/triton_client parallel input.mp4 output.mp4 6
+#### Performance Comparison
+
+```bash
+# Test different thread counts
+./build/bin/triton_client parallel 30sec.mp4 output/test_4th.mp4 4   # ~90 FPS
+./build/bin/triton_client parallel 30sec.mp4 output/test_6th.mp4 6   # ~88 FPS
+./build/bin/triton_client parallel 30sec.mp4 output/test_8th.mp4 8   # ~88 FPS
+
+# Compare with single-threaded
+./build/bin/triton_client video 30sec.mp4 output/test_single.mp4     # ~35 FPS
+```
+
+#### Example Output
+
+```
+Processing video (PARALLEL): 30sec.mp4
+Using 4 inference threads
+Video: 640x360 @ 25 FPS, 900 frames
+
+Processed 30/51 frames | FPS: 75.77
+Processed 60/81 frames | FPS: 82.74
+Processed 90/111 frames | FPS: 85.36
+...
+Processed 900/900 frames | FPS: 90.33
+
+PARALLEL PROCESSING SUMMARY
+===========================
+Total frames: 900
+Total time: 9.98s
+Average FPS: 90.22
+Average E2E latency: 11.09ms
 ```
 
 ### Configuration
@@ -214,7 +361,49 @@ Example:
  */
 ```
 
-## 🐛 Debugging
+## 🐛 Troubleshooting
+
+### Missing Shared Libraries
+
+If you encounter errors like:
+```
+error while loading shared libraries: libgrpc++.so.1.51: cannot open shared object file
+```
+
+**Solution 1 - Install runtime libraries:**
+```bash
+sudo apt install -y libgrpc++1.51 libprotobuf32 libopencv-core4.6
+```
+
+**Solution 2 - Check what's missing:**
+```bash
+ldd ./build/bin/triton_client | grep "not found"
+```
+
+**Solution 3 - Use Triton SDK container** (see Prerequisites section above)
+
+### Connection Issues
+
+If the client can't connect to Triton:
+```bash
+# Check if Triton server is running
+curl -v localhost:8000/v2/health/ready
+
+# Check if model is loaded
+curl localhost:8000/v2/models/yolov11
+
+# Test with Python client first
+cd ../python_client
+python main.py
+```
+
+### Performance Issues
+
+- **Low FPS**: Try adjusting the number of inference threads (default: 4)
+- **High memory usage**: Reduce queue sizes in `run_video_inference_parallel`
+- **Frame drops**: Check if Triton server has sufficient resources
+
+### Debug Output
 
 Enable debug output in source files:
 
