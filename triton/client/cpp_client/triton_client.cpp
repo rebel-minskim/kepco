@@ -391,6 +391,9 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
                                                int num_threads) {
     std::cout << "Processing video (PARALLEL): " << video_path << std::endl;
     std::cout << "Using " << num_threads << " inference threads" << std::endl;
+    if (output_path.empty()) {
+        std::cout << "⚡ INFERENCE-ONLY MODE (비디오 저장 안 함) ⚡" << std::endl;
+    }
     
     // Thread-safe queues
     struct FrameData {
@@ -458,15 +461,20 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
     
     // Thread 1: Read frames
     std::thread reader([&]() {
-        cv::Mat frame;
         int idx = 0;
-        while (cap.read(frame)) {
+        while (true) {
+            cv::Mat frame;
+            if (!cap.read(frame)) break;
+            
+            int cols = frame.cols;
+            int rows = frame.rows;
             {
                 std::unique_lock<std::mutex> lock(read_mutex);
                 read_cv.wait(lock, [&]() { return read_queue.size() < queue_size; });
-                read_queue.push({frame.clone(), idx, frame.cols, frame.rows});
+                // OPTIMIZATION: Use move to avoid copy
+                read_queue.push({std::move(frame), idx, cols, rows});
                 idx++;
-                frames_read = idx;  // Update incrementally for progress display
+                frames_read = idx;
             }
             read_cv.notify_one();
         }
@@ -474,29 +482,42 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
         read_cv.notify_all();
     });
     
-    // Thread 2: Preprocess
-    std::thread preprocessor([&]() {
-        while (true) {
-            FrameData data;
-            {
-                std::unique_lock<std::mutex> lock(read_mutex);
-                read_cv.wait(lock, [&]() { return !read_queue.empty() || reading_done; });
-                if (read_queue.empty() && reading_done) break;
-                if (read_queue.empty()) continue;
+    // Threads 2-(num_threads+1): Parallel Preprocessors
+    // CRITICAL: Multiple preprocessor threads to avoid bottleneck
+    std::vector<std::thread> preprocessor_workers;
+    for (int i = 0; i < num_threads; ++i) {
+        preprocessor_workers.emplace_back([&]() {
+            while (true) {
+                FrameData data;
+                {
+                    std::unique_lock<std::mutex> lock(read_mutex);
+                    read_cv.wait(lock, [&]() { return !read_queue.empty() || reading_done; });
+                    if (read_queue.empty() && reading_done) break;
+                    if (read_queue.empty()) continue;
+                    
+                    data = std::move(read_queue.front());
+                    read_queue.pop();
+                }
+                read_cv.notify_one();
                 
-                data = std::move(read_queue.front());
-                read_queue.pop();
+                auto tensor = prepare_input_tensor(data.frame);
+                
+                {
+                    std::unique_lock<std::mutex> lock(preprocess_mutex);
+                    preprocess_cv.wait(lock, [&]() { return preprocess_queue.size() < queue_size; });
+                    // OPTIMIZATION: Only keep frame if needed for output
+                    cv::Mat frame_to_keep = output_path.empty() ? cv::Mat() : std::move(data.frame);
+                    preprocess_queue.push({std::move(tensor), std::move(frame_to_keep), data.frame_idx, data.orig_width, data.orig_height});
+                }
+                preprocess_cv.notify_one();
             }
-            read_cv.notify_one();
-            
-            auto tensor = prepare_input_tensor(data.frame);
-            
-            {
-                std::unique_lock<std::mutex> lock(preprocess_mutex);
-                preprocess_cv.wait(lock, [&]() { return preprocess_queue.size() < queue_size; });
-                preprocess_queue.push({std::move(tensor), data.frame, data.frame_idx, data.orig_width, data.orig_height});
-            }
-            preprocess_cv.notify_one();
+        });
+    }
+    
+    // Monitor thread to signal when all preprocessors are done
+    std::thread preprocess_monitor([&]() {
+        for (auto& worker : preprocessor_workers) {
+            worker.join();
         }
         preprocessing_done = true;
         preprocess_cv.notify_all();
@@ -524,7 +545,8 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
                 {
                     std::unique_lock<std::mutex> lock(inference_mutex);
                     inference_cv.wait(lock, [&]() { return inference_queue.size() < queue_size * 2; });
-                    inference_queue.push({std::move(detections), data.frame, data.frame_idx});
+                    // OPTIMIZATION: Only keep frame if needed for output
+                    inference_queue.push({std::move(detections), std::move(data.frame), data.frame_idx});
                 }
                 inference_cv.notify_one();
             }
@@ -532,6 +554,9 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
     }
     
     // Thread N+1: Draw and write (must be sequential for video output)
+    // OPTIMIZATION: Skip drawing/writing if no output file (inference-only mode)
+    bool skip_output = output_path.empty();
+    
     std::thread drawer([&]() {
         int expected_frame = 0;
         std::map<int, InferenceResult> buffer;
@@ -561,28 +586,32 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
             while (buffer.count(expected_frame)) {
                 auto& res = buffer[expected_frame];
                 
-                // Draw detections on the frame we already have
-                cv::Mat frame = res.frame.clone();
-                for (const auto& det : res.detections) {
-                    if (det.confidence < config_.model.draw_confidence) continue;
+                // OPTIMIZATION: Skip drawing/writing in inference-only mode
+                if (!skip_output) {
+                    // OPTIMIZATION: Draw directly on res.frame (no clone needed)
+                    for (const auto& det : res.detections) {
+                        if (det.confidence < config_.model.draw_confidence) continue;
+                        
+                        std::string class_name = (det.class_id < static_cast<int>(class_names_.size()))
+                                               ? class_names_[det.class_id]
+                                               : "class_" + std::to_string(det.class_id);
+                        
+                        draw_detection(res.frame, det.class_id, class_name, det.confidence,
+                                     static_cast<int>(det.x1), static_cast<int>(det.y1),
+                                     static_cast<int>(det.x2), static_cast<int>(det.y2),
+                                     config_.video.line_thickness, config_.video.font_scale,
+                                     config_.video.font_thickness);
+                    }
                     
-                    std::string class_name = (det.class_id < static_cast<int>(class_names_.size()))
-                                           ? class_names_[det.class_id]
-                                           : "class_" + std::to_string(det.class_id);
-                    
-                    draw_detection(frame, det.class_id, class_name, det.confidence,
-                                 static_cast<int>(det.x1), static_cast<int>(det.y1),
-                                 static_cast<int>(det.x2), static_cast<int>(det.y2),
-                                 config_.video.line_thickness, config_.video.font_scale,
-                                 config_.video.font_thickness);
-                }
-                
-                if (writer.isOpened()) {
-                    writer.write(frame);
+                    if (writer.isOpened()) {
+                        writer.write(res.frame);
+                    }
                 }
                 
                 frames_processed++;
-                if (frames_processed % 30 == 0) {
+                // Inference-only mode: print more frequently
+                int print_interval = skip_output ? 100 : 30;
+                if (frames_processed % print_interval == 0) {
                     auto elapsed = std::chrono::duration<float>(
                         std::chrono::high_resolution_clock::now() - start_time).count();
                     float current_fps = frames_processed / elapsed;
@@ -599,21 +628,26 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
         // Process any remaining frames in buffer (shouldn't happen, but safety check)
         while (buffer.count(expected_frame)) {
             auto& res = buffer[expected_frame];
-            cv::Mat frame = res.frame.clone();
-            for (const auto& det : res.detections) {
-                if (det.confidence < config_.model.draw_confidence) continue;
-                std::string class_name = (det.class_id < static_cast<int>(class_names_.size()))
-                                       ? class_names_[det.class_id]
-                                       : "class_" + std::to_string(det.class_id);
-                draw_detection(frame, det.class_id, class_name, det.confidence,
-                             static_cast<int>(det.x1), static_cast<int>(det.y1),
-                             static_cast<int>(det.x2), static_cast<int>(det.y2),
-                             config_.video.line_thickness, config_.video.font_scale,
-                             config_.video.font_thickness);
+            
+            // OPTIMIZATION: Skip drawing/writing in inference-only mode
+            if (!skip_output) {
+                // OPTIMIZATION: Draw directly on res.frame (no clone needed)
+                for (const auto& det : res.detections) {
+                    if (det.confidence < config_.model.draw_confidence) continue;
+                    std::string class_name = (det.class_id < static_cast<int>(class_names_.size()))
+                                           ? class_names_[det.class_id]
+                                           : "class_" + std::to_string(det.class_id);
+                    draw_detection(res.frame, det.class_id, class_name, det.confidence,
+                                 static_cast<int>(det.x1), static_cast<int>(det.y1),
+                                 static_cast<int>(det.x2), static_cast<int>(det.y2),
+                                 config_.video.line_thickness, config_.video.font_scale,
+                                 config_.video.font_thickness);
+                }
+                if (writer.isOpened()) {
+                    writer.write(res.frame);
+                }
             }
-            if (writer.isOpened()) {
-                writer.write(frame);
-            }
+            
             frames_processed++;
             buffer.erase(expected_frame);
             expected_frame++;
@@ -622,7 +656,7 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
     
     // Wait for all threads
     reader.join();
-    preprocessor.join();
+    preprocess_monitor.join();  // This joins all preprocessor workers
     for (auto& worker : inference_workers) {
         worker.join();
     }
