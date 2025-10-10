@@ -39,24 +39,6 @@ std::vector<Detection> YoloPostprocessor::postprocess(
     float max_conf_seen = 0.0f;
     float min_conf_passed = 1.0f;
     
-    // Debug: Check actual data layout
-    if (print_debug && num_boxes > 0) {
-        std::cout << "\n=== RAW DATA CHECK ===" << std::endl;
-        std::cout << "First 20 values (what we think are cx for first 20 boxes):" << std::endl;
-        for (int i = 0; i < 20; ++i) {
-            std::cout << raw_output[0 * num_boxes + i] << " ";
-        }
-        std::cout << "\n\nValues at indices 0-12 (what we think is box 0's all features in row-major):" << std::endl;
-        for (int i = 0; i < 13; ++i) {
-            std::cout << raw_output[i] << " ";
-        }
-        std::cout << "\n\nValues at indices 52500-52512 (feature 4, first 13 boxes - should be class 0 confs):" << std::endl;
-        for (int i = 0; i < 13; ++i) {
-            std::cout << raw_output[52500 + i] << " ";
-        }
-        std::cout << "\n=== END RAW DATA ===" << std::endl << std::endl;
-    }
-    
     // Parse each anchor box
     // Following Ultralytics NMS logic from https://github.com/ultralytics/ultralytics/blob/main/ultralytics/utils/nms.py
     // Input format: [1, num_features, num_boxes] = [1, 13, 13125]

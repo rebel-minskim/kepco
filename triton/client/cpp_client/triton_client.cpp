@@ -138,15 +138,46 @@ void TritonClient::get_model_info() {
 void TritonClient::run_dummy_inference() {
     std::cout << "Running dummy inference..." << std::endl;
     
-    // Create dummy input tensor
-    std::vector<float> dummy_input(config_.model.input_height * config_.model.input_width * 3, 1.0f);
+    auto e2e_start = std::chrono::high_resolution_clock::now();
     
-    // Run inference (dummy has no original size, use input size)
-    auto detections = run_inference(dummy_input, config_.model.input_width, config_.model.input_height);
+    // Preprocess: Create dummy input tensor
+    auto preprocess_start = std::chrono::high_resolution_clock::now();
+    std::vector<float> dummy_input(config_.model.input_height * config_.model.input_width * 3, 1.0f);
+    auto preprocess_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - preprocess_start).count();
+    
+    // Inference (gRPC call to Triton)
+    auto inference_start = std::chrono::high_resolution_clock::now();
+    auto output_tensor = grpc_client_->run_inference(config_.model.name, dummy_input);
+    auto inference_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - inference_start).count();
+    
+    // Postprocess (YOLO decode + NMS)
+    auto postprocess_start = std::chrono::high_resolution_clock::now();
+    auto detections = yolo_postprocessor_->postprocess(
+        output_tensor,
+        config_.model.input_width,
+        config_.model.input_height,
+        config_.model.input_width,
+        config_.model.input_height,
+        config_.model.confidence_threshold,
+        config_.model.iou_threshold,
+        config_.model.max_detections
+    );
+    auto postprocess_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - postprocess_start).count();
+    
+    auto e2e_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - e2e_start).count();
     
     std::cout << "Received result buffer of size: " << dummy_input.size() << std::endl;
     float sum = std::accumulate(dummy_input.begin(), dummy_input.end(), 0.0f);
     std::cout << "Buffer sum: " << sum << std::endl;
+    std::cout << "Detected " << detections.size() << " objects" << std::endl;
+    std::cout << "Latency - E2E: " << e2e_latency * 1000.0f << "ms | "
+              << "Preprocess: " << preprocess_latency * 1000.0f << "ms | "
+              << "Inference: " << inference_latency * 1000.0f << "ms | "
+              << "Postprocess: " << postprocess_latency * 1000.0f << "ms" << std::endl;
 }
 
 std::vector<float> TritonClient::prepare_input_tensor(const cv::Mat& image) {
@@ -163,14 +194,14 @@ std::vector<Detection> TritonClient::run_inference(const std::vector<float>& inp
     }
     
     try {
-        // Run inference using the gRPC client
+        // Run inference using the gRPC client (pure inference, no postprocessing)
         auto output_tensor = grpc_client_->run_inference(config_.model.name, input_tensor);
         
         if (output_tensor.empty()) {
             return {};
         }
         
-        // Use native C++ YOLO postprocessor with actual original image dimensions
+        // Postprocess: decode YOLO output with NMS
         return yolo_postprocessor_->postprocess(
             output_tensor,
             config_.model.input_width,
@@ -198,13 +229,43 @@ void TritonClient::run_image_inference(const std::string& image_path, const std:
         return;
     }
     
-    // Prepare input
-    auto input_tensor = prepare_input_tensor(image);
+    auto e2e_start = std::chrono::high_resolution_clock::now();
     
-    // Run inference with original image dimensions
-    auto detections = run_inference(input_tensor, image.cols, image.rows);
+    // Preprocess
+    auto preprocess_start = std::chrono::high_resolution_clock::now();
+    auto input_tensor = prepare_input_tensor(image);
+    auto preprocess_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - preprocess_start).count();
+    
+    // Inference (gRPC call to Triton)
+    auto inference_start = std::chrono::high_resolution_clock::now();
+    auto output_tensor = grpc_client_->run_inference(config_.model.name, input_tensor);
+    auto inference_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - inference_start).count();
+    
+    // Postprocess (YOLO decode + NMS)
+    auto postprocess_start = std::chrono::high_resolution_clock::now();
+    auto detections = yolo_postprocessor_->postprocess(
+        output_tensor,
+        config_.model.input_width,
+        config_.model.input_height,
+        image.cols,
+        image.rows,
+        config_.model.confidence_threshold,
+        config_.model.iou_threshold,
+        config_.model.max_detections
+    );
+    auto postprocess_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - postprocess_start).count();
+    
+    auto e2e_latency = std::chrono::duration<float>(
+        std::chrono::high_resolution_clock::now() - e2e_start).count();
     
     std::cout << "Detected " << detections.size() << " objects" << std::endl;
+    std::cout << "Latency - E2E: " << e2e_latency * 1000.0f << "ms | "
+              << "Preprocess: " << preprocess_latency * 1000.0f << "ms | "
+              << "Inference: " << inference_latency * 1000.0f << "ms | "
+              << "Postprocess: " << postprocess_latency * 1000.0f << "ms" << std::endl;
     
     // Draw detections
     for (const auto& detection : detections) {
@@ -311,15 +372,24 @@ void TritonClient::process_video_frame(cv::Mat& frame, PerformanceStats& stats,
     auto preprocess_latency = std::chrono::duration<float>(
         std::chrono::high_resolution_clock::now() - preprocess_start).count();
     
-    // Inference with original frame dimensions
+    // Inference (gRPC call to Triton)
     auto inference_start = std::chrono::high_resolution_clock::now();
-    auto detections = run_inference(input_tensor, frame.cols, frame.rows);
+    auto output_tensor = grpc_client_->run_inference(config_.model.name, input_tensor);
     auto inference_latency = std::chrono::duration<float>(
         std::chrono::high_resolution_clock::now() - inference_start).count();
     
-    // Postprocess
+    // Postprocess (YOLO decode + NMS)
     auto postprocess_start = std::chrono::high_resolution_clock::now();
-    // Postprocessing is already done in run_inference for simplicity
+    auto detections = yolo_postprocessor_->postprocess(
+        output_tensor,
+        config_.model.input_width,
+        config_.model.input_height,
+        frame.cols,
+        frame.rows,
+        config_.model.confidence_threshold,
+        config_.model.iou_threshold,
+        config_.model.max_detections
+    );
     auto postprocess_latency = std::chrono::duration<float>(
         std::chrono::high_resolution_clock::now() - postprocess_start).count();
     
@@ -401,6 +471,7 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
         int frame_idx;
         int orig_width;
         int orig_height;
+        std::chrono::high_resolution_clock::time_point start_time;
     };
     
     struct PreprocessedData {
@@ -409,12 +480,18 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
         int frame_idx;
         int orig_width;
         int orig_height;
+        std::chrono::high_resolution_clock::time_point start_time;
+        float preprocess_latency;
     };
     
     struct InferenceResult {
         std::vector<Detection> detections;
         cv::Mat frame;  // Frame with detections
         int frame_idx;
+        std::chrono::high_resolution_clock::time_point start_time;
+        float preprocess_latency;
+        float inference_latency;
+        float postprocess_latency;
     };
     
     std::queue<FrameData> read_queue;
@@ -468,11 +545,12 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
             
             int cols = frame.cols;
             int rows = frame.rows;
+            auto frame_start = std::chrono::high_resolution_clock::now();
             {
                 std::unique_lock<std::mutex> lock(read_mutex);
                 read_cv.wait(lock, [&]() { return read_queue.size() < queue_size; });
                 // OPTIMIZATION: Use move to avoid copy
-                read_queue.push({std::move(frame), idx, cols, rows});
+                read_queue.push({std::move(frame), idx, cols, rows, frame_start});
                 idx++;
                 frames_read = idx;
             }
@@ -500,14 +578,18 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
                 }
                 read_cv.notify_one();
                 
+                auto preprocess_start = std::chrono::high_resolution_clock::now();
                 auto tensor = prepare_input_tensor(data.frame);
+                float preprocess_latency = std::chrono::duration<float>(
+                    std::chrono::high_resolution_clock::now() - preprocess_start).count();
                 
                 {
                     std::unique_lock<std::mutex> lock(preprocess_mutex);
                     preprocess_cv.wait(lock, [&]() { return preprocess_queue.size() < queue_size; });
                     // OPTIMIZATION: Only keep frame if needed for output
                     cv::Mat frame_to_keep = output_path.empty() ? cv::Mat() : std::move(data.frame);
-                    preprocess_queue.push({std::move(tensor), std::move(frame_to_keep), data.frame_idx, data.orig_width, data.orig_height});
+                    preprocess_queue.push({std::move(tensor), std::move(frame_to_keep), data.frame_idx, 
+                                          data.orig_width, data.orig_height, data.start_time, preprocess_latency});
                 }
                 preprocess_cv.notify_one();
             }
@@ -540,13 +622,33 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
                 }
                 preprocess_cv.notify_one();
                 
-                auto detections = run_inference(data.tensor, data.orig_width, data.orig_height);
+                // Inference (gRPC call to Triton)
+                auto inference_start = std::chrono::high_resolution_clock::now();
+                auto output_tensor = grpc_client_->run_inference(config_.model.name, data.tensor);
+                float inference_latency = std::chrono::duration<float>(
+                    std::chrono::high_resolution_clock::now() - inference_start).count();
+                
+                // Postprocess (YOLO decode + NMS)
+                auto postprocess_start = std::chrono::high_resolution_clock::now();
+                auto detections = yolo_postprocessor_->postprocess(
+                    output_tensor,
+                    config_.model.input_width,
+                    config_.model.input_height,
+                    data.orig_width,
+                    data.orig_height,
+                    config_.model.confidence_threshold,
+                    config_.model.iou_threshold,
+                    config_.model.max_detections
+                );
+                float postprocess_latency = std::chrono::duration<float>(
+                    std::chrono::high_resolution_clock::now() - postprocess_start).count();
                 
                 {
                     std::unique_lock<std::mutex> lock(inference_mutex);
                     inference_cv.wait(lock, [&]() { return inference_queue.size() < queue_size * 2; });
                     // OPTIMIZATION: Only keep frame if needed for output
-                    inference_queue.push({std::move(detections), std::move(data.frame), data.frame_idx});
+                    inference_queue.push({std::move(detections), std::move(data.frame), data.frame_idx,
+                                         data.start_time, data.preprocess_latency, inference_latency, postprocess_latency});
                 }
                 inference_cv.notify_one();
             }
@@ -609,15 +711,23 @@ void TritonClient::run_video_inference_parallel(const std::string& video_path,
                 }
                 
                 frames_processed++;
-                // Inference-only mode: print more frequently
-                int print_interval = skip_output ? 100 : 30;
+                
+                // Calculate E2E latency for this frame
+                float e2e_latency = std::chrono::duration<float>(
+                    std::chrono::high_resolution_clock::now() - res.start_time).count();
+                
+                // Print latency every frame (or every N frames to reduce output)
+                int print_interval = skip_output ? 100 : 10;
                 if (frames_processed % print_interval == 0) {
                     auto elapsed = std::chrono::duration<float>(
                         std::chrono::high_resolution_clock::now() - start_time).count();
                     float current_fps = frames_processed / elapsed;
-                    std::cout << "Processed " << frames_processed << "/" << frames_read 
-                              << " frames | FPS: " << std::fixed << std::setprecision(2) 
-                              << current_fps << std::endl;
+                    std::cout << "Frame " << res.frame_idx << ": " << res.detections.size() << " objects | "
+                              << "E2E: " << e2e_latency * 1000.0f << "ms | "
+                              << "Pre: " << res.preprocess_latency * 1000.0f << "ms | "
+                              << "Inf: " << res.inference_latency * 1000.0f << "ms | "
+                              << "Post: " << res.postprocess_latency * 1000.0f << "ms | "
+                              << "FPS: " << std::fixed << std::setprecision(2) << current_fps << std::endl;
                 }
                 
                 buffer.erase(expected_frame);
