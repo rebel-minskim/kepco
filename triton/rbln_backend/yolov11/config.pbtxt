@@ -1,4 +1,4 @@
-name: "yolov11"
+name: "yolov8"
 backend: "python"
 
 input [
@@ -32,8 +32,11 @@ output [
 ]
 
 # Configure instance group
-instance_group: [
-  { kind: KIND_MODEL, count: 2 }
+instance_group [
+  {
+    count: 4
+    kind: KIND_MODEL
+  }
 ]
 
 max_batch_size: 1
