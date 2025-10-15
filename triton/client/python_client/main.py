@@ -88,24 +88,36 @@ class TritonClient:
             print(f"Failed to get model info: {ex.message()}")
     
     def run_dummy_inference(self):
-        """Run dummy inference with empty buffer."""
+        """Run dummy inference with JPEG bytes."""
         print("Running dummy inference...")
         
         import numpy as np
+        import cv2
+        
+        # Create a dummy image and encode as JPEG
+        dummy_image = np.random.randint(0, 255, 
+            (self.config.model.input_height, self.config.model.input_width, 3), 
+            dtype=np.uint8)
+        
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+        success, encoded_image = cv2.imencode('.jpg', dummy_image, encode_param)
+        if not success:
+            print("Failed to encode dummy image")
+            return
+        
+        jpeg_bytes = encoded_image.tobytes()
+        jpeg_array = np.frombuffer(jpeg_bytes, dtype=np.uint8)
         
         inputs = []
         outputs = []
         
-        # Create input
+        # Create input for JPEG ensemble
         inputs.append(grpcclient.InferInput(
-            "INPUT__0", 
-            [1, 3, self.config.model.input_height, self.config.model.input_width], 
-            "FP32"
+            "IMAGE_BYTES", 
+            [len(jpeg_bytes)], 
+            "UINT8"
         ))
-        inputs[0].set_data_from_numpy(
-            np.ones(shape=(1, 3, self.config.model.input_height, self.config.model.input_width), 
-                   dtype=np.float32)
-        )
+        inputs[0].set_data_from_numpy(jpeg_array)
         
         # Create output
         outputs.append(grpcclient.InferRequestedOutput("OUTPUT__0"))
@@ -137,18 +149,28 @@ class TritonClient:
             print(f"Failed to load image: {image_path}")
             return
         
-        # Preprocess
-        input_buffer = preprocess(image, (self.config.model.input_width, self.config.model.input_height))
+        # Resize and JPEG encode (for yolov11_ensemble)
+        resized_image = cv2.resize(image, (self.config.model.input_width, self.config.model.input_height))
         
-        # Prepare inputs/outputs
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+        success, encoded_image = cv2.imencode('.jpg', resized_image, encode_param)
+        if not success:
+            print("Failed to encode image as JPEG")
+            return
+        
+        jpeg_bytes = encoded_image.tobytes()
+        jpeg_array = np.frombuffer(jpeg_bytes, dtype=np.uint8)
+        print(f"JPEG size: {len(jpeg_bytes)} bytes ({len(jpeg_bytes)/1024:.1f} KB)")
+        
+        # Prepare inputs/outputs for JPEG ensemble
         inputs = []
         outputs = []
         inputs.append(grpcclient.InferInput(
-            "INPUT__0", 
-            [1, 3, self.config.model.input_height, self.config.model.input_width], 
-            "FP32"
+            "IMAGE_BYTES", 
+            [len(jpeg_bytes)], 
+            "UINT8"
         ))
-        inputs[0].set_data_from_numpy(input_buffer)
+        inputs[0].set_data_from_numpy(jpeg_array)
         outputs.append(grpcclient.InferRequestedOutput("OUTPUT__0"))
         
         # Run inference
@@ -161,10 +183,23 @@ class TritonClient:
         
         # Postprocess
         output_tensor = results.as_numpy("OUTPUT__0")
+        
+        # Reshape output tensor for YOLOv11 format
+        # Ensemble output is (batch*num_classes, total_boxes) 
+        # Need to reshape to (batch, num_classes + coords, total_boxes)
+        if output_tensor.shape[0] > 1 and len(output_tensor.shape) == 2:
+            # Reshape from (13, 13125) or similar to (1, 84, 8400) format
+            batch_size = 1
+            num_boxes = output_tensor.shape[1]
+            num_features = output_tensor.shape[0]
+            output_tensor = output_tensor.reshape(batch_size, num_features, num_boxes)
+        
+        # For ensemble model: server does simple resize (no letterbox)
+        # Use simple proportional scaling for box coordinates
         detections = postprocess(
             output_tensor, 
-            input_buffer, 
-            image,
+            (self.config.model.input_height, self.config.model.input_width),  # Model size: 800x800
+            image,  # Original image for final box coordinates
             self.config.model.confidence_threshold,
             self.config.model.iou_threshold,
             self.config.model.max_detections

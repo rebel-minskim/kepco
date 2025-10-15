@@ -6,7 +6,6 @@ import torch
 from typing import Tuple, List
 from ultralytics.data.augment import LetterBox
 from ultralytics.utils.nms import non_max_suppression as nms
-from ultralytics.utils.ops import scale_boxes
 
 
 def preprocess(frame: np.ndarray, new_shape: Tuple[int, int] = (640, 640)) -> np.ndarray:
@@ -27,31 +26,49 @@ def preprocess(frame: np.ndarray, new_shape: Tuple[int, int] = (640, 640)) -> np
     return img
 
 
-def postprocess(outputs: np.ndarray, input_image: np.ndarray, origin_image: np.ndarray,
+def postprocess(outputs: np.ndarray, model_size: tuple, origin_image: np.ndarray,
                 conf_threshold: float = 0.25, iou_threshold: float = 0.65, 
                 max_detections: int = 1024) -> torch.Tensor:
     """
-    Postprocess model outputs to get detections.
+    Postprocess model outputs with simple proportional scaling.
+    For ensemble model with server-side preprocessing (simple resize, no letterbox).
     
     Args:
-        outputs: Raw model outputs
-        input_image: Preprocessed input image
+        outputs: Raw model outputs (1, num_features, num_boxes)
+        model_size: Model input size (height, width), e.g., (800, 800)
         origin_image: Original image
         conf_threshold: Confidence threshold
         iou_threshold: IoU threshold for NMS
         max_detections: Maximum number of detections
         
     Returns:
-        Tensor of detections
+        Tensor of detections with boxes in original image coordinates
     """
-    # Make array writable to avoid PyTorch warning
+    # Make array writable
     outputs = outputs.copy()
+    
+    # Run NMS
     pred = nms(torch.from_numpy(outputs), conf_threshold, iou_threshold, 
               None, False, max_det=max_detections)[0]
+    
     if len(pred) == 0:
         return torch.empty(0, 6)
-
-    pred[:, :4] = scale_boxes(input_image.shape[2:], pred[:, :4], origin_image.shape)
+    
+    # Simple proportional scaling from model size to original size
+    # Model boxes are in 800x800 space, scale to original image size
+    orig_h, orig_w = origin_image.shape[:2]
+    model_h, model_w = model_size
+    
+    # Scale factors
+    scale_x = orig_w / model_w
+    scale_y = orig_h / model_h
+    
+    # Scale boxes: [x1, y1, x2, y2]
+    pred[:, 0] *= scale_x  # x1
+    pred[:, 1] *= scale_y  # y1
+    pred[:, 2] *= scale_x  # x2
+    pred[:, 3] *= scale_y  # y2
+    
     return pred
 
 

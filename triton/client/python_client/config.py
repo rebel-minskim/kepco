@@ -10,7 +10,7 @@ from typing import Tuple, List
 @dataclass
 class ModelConfig:
     """Model configuration parameters."""
-    name: str = "yolov11"
+    name: str = "yolov11_ensemble"  # Changed to use JPEG ensemble model
     input_width: int = 800
     input_height: int = 800
     confidence_threshold: float = 0.20

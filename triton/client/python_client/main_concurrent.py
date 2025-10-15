@@ -87,16 +87,27 @@ class ConcurrentTritonClient:
                     
                 frame, frame_id, timestamp = request_data
                 
-                # Preprocess
-                input_buffer = preprocess(frame, (self.config.model.input_width, self.config.model.input_height))
+                # JPEG encode (for yolov11_ensemble)
+                # Resize frame to model input size first
+                resized_frame = cv2.resize(frame, (self.config.model.input_width, self.config.model.input_height))
                 
-                # Prepare inputs/outputs
+                # Encode as JPEG
+                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+                success, encoded_image = cv2.imencode('.jpg', resized_frame, encode_param)
+                if not success:
+                    print(f"Failed to encode frame {frame_id}")
+                    continue
+                
+                jpeg_bytes = encoded_image.tobytes()
+                jpeg_array = np.frombuffer(jpeg_bytes, dtype=np.uint8)
+                
+                # Prepare inputs/outputs for JPEG ensemble
                 inputs = [grpcclient.InferInput(
-                    "INPUT__0", 
-                    [1, 3, self.config.model.input_height, self.config.model.input_width], 
-                    "FP32"
+                    "IMAGE_BYTES", 
+                    [len(jpeg_bytes)], 
+                    "UINT8"
                 )]
-                inputs[0].set_data_from_numpy(input_buffer)
+                inputs[0].set_data_from_numpy(jpeg_array)
                 outputs = [grpcclient.InferRequestedOutput("OUTPUT__0")]
                 
                 # Run inference
@@ -111,10 +122,23 @@ class ConcurrentTritonClient:
                 
                 # Postprocess
                 output_tensor = results.as_numpy("OUTPUT__0")
+                
+                # Reshape output tensor for YOLOv11 format
+                # Ensemble output is (batch*num_classes, total_boxes) 
+                # Need to reshape to (batch, num_classes + coords, total_boxes)
+                if output_tensor.shape[0] > 1 and len(output_tensor.shape) == 2:
+                    # Reshape from (13, 13125) or similar to (1, 84, 8400) format
+                    batch_size = 1
+                    num_boxes = output_tensor.shape[1]
+                    num_features = output_tensor.shape[0]
+                    output_tensor = output_tensor.reshape(batch_size, num_features, num_boxes)
+                
+                # For ensemble model: server does simple resize (no letterbox)
+                # Use simple proportional scaling for box coordinates
                 detections = postprocess(
                     output_tensor, 
-                    input_buffer, 
-                    frame,
+                    (self.config.model.input_height, self.config.model.input_width),  # Model size: 800x800
+                    frame,  # Original frame for final box coordinates
                     self.config.model.confidence_threshold,
                     self.config.model.iou_threshold,
                     self.config.model.max_detections
@@ -345,7 +369,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
                        help='Output file path')
     
     # Model configuration
-    parser.add_argument('-m', '--model', type=str, default='yolov11',
+    parser.add_argument('-m', '--model', type=str, default='yolov11_ensemble',
                        help='Model name')
     parser.add_argument('--width', type=int, default=800,
                        help='Input width')
