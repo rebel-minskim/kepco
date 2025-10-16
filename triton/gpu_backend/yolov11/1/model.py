@@ -51,6 +51,10 @@ class TritonPythonModel:
                 for param in self.model.parameters():
                     param.requires_grad = False
             
+            # Detect model dtype (float16 or float32)
+            self.model_dtype = next(self.model.parameters()).dtype
+            pb_utils.Logger.log_info(f"Model dtype: {self.model_dtype}")
+            
             pb_utils.Logger.log_info(f"Successfully loaded YOLOv11 model on {self.device}")
             
         except Exception as e:
@@ -74,6 +78,9 @@ class TritonPythonModel:
                 # Ensure correct shape (add batch dimension if needed)
                 if len(input_tensor.shape) == 3:
                     input_tensor = input_tensor.unsqueeze(0)
+                
+                # Convert input to match model dtype (e.g., float16 if model is half precision)
+                input_tensor = input_tensor.to(self.model_dtype)
                 
                 # Run inference
                 with torch.no_grad():

@@ -35,7 +35,7 @@ output [
 # Deploy 2 instances per GPU across multiple GPUs
 instance_group [
   {
-    count: 2
+    count: 8
     kind: KIND_GPU
   }
 ]
