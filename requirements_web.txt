@@ -1,0 +1,7 @@
+flask
+opencv-python
+rebel-compiler==0.8.3
+numpy
+pillow
+pyyaml
+
