@@ -92,62 +92,17 @@ perf_analyzer -m yolov11_ensemble \
   --concurrency-range 1:8:1
 ```
 
-### gRPC 프로토콜 사용
-
-HTTP 대신 gRPC를 사용하면 더 나은 성능을 얻을 수 있습니다:
-
-```bash
-# 단일 파일 크기 지정 (예: 573128 bytes)
-perf_analyzer -m yolov11_ensemble \
-  --shape IMAGE_BYTES:573128 \
-  --input-data ./perf_data \
-  -u localhost:8001 \
-  -i grpc \
-  --request-rate-range 10:100:10
-```
-
-**옵션 설명:**
-- `-i grpc`: gRPC 프로토콜 사용 (포트 8001, HTTP는 8000)
-- `--shape IMAGE_BYTES:573128`: 동적 shape 지정 (실제 파일 크기로 조정)
-
-파일 크기 확인:
-```bash
-stat -c%s ./perf_data/IMAGE_BYTES
-```
-
 ### Request Rate 기반 테스트
 
-특정 request rate로 부하 테스트:
-
 ```bash
-# 고정 request rate
 perf_analyzer -m yolov11_ensemble \
   -u localhost:8000 \
   --input-data=/workspace/kepco/triton/perf_data/input_data.json \
-  --rate 50 \
-  --measurement-interval=10000
-```
-
-```bash
-# Request rate 범위 스윕 (시작:끝:증가량)
-perf_analyzer -m yolov11_ensemble \
-  -u localhost:8000 \
-  --input-data=/workspace/kepco/triton/perf_data/input_data.json \
-  --request-rate-range 10:100:10 \
-  --measurement-interval=10000 \
+  --request-rate-range=100:200:10 \
   --max-threads 32
 ```
 
-**Request Rate 옵션:**
-- `--rate <값>`: 초당 고정 요청 수 (예: `--rate 50` = 50 req/s)
-- `--request-rate-range <시작:끝:증가>`: 범위 테스트 (예: `10:100:10` = 10, 20, 30, ..., 100 req/s)
-- `--concurrency-range <시작:끝:증가>`: 동시 요청 수 (예: `1:8:1` = 1, 2, 3, ..., 8개 동시 요청)
-- `--measurement-interval <ms>`: 각 측정 간격 (기본: 5000ms)
-- `--max-threads <수>`: 최대 스레드 수
-
 ### Shared Memory 사용
-
-대용량 데이터 전송 시 shared memory를 사용하면 성능 향상:
 
 ```bash
 perf_analyzer -m yolov11_ensemble \
