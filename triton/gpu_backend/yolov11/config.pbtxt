@@ -31,13 +31,9 @@ output [
   }
 ]
 
-# Configure instance group for GPU
-# Deploy 2 instances per GPU across multiple GPUs
-instance_group [
-  {
-    count: 2
-    kind: KIND_GPU
-  }
+# Configure instance group
+instance_group: [
+  { kind: KIND_GPU, count: 8 }
 ]
 
 max_batch_size: 1
