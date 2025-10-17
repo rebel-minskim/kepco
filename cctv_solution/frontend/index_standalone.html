@@ -434,31 +434,16 @@ function createPerformanceChart() {
 
 // Create energy gauges
 function createEnergyChart() {
-    // Use fixed values for display
-    // Calculate total energy: (Frames / FPS) * Power = Total Energy
-    // For 1800 frames video
-    const npuTotalEnergy = 530.07; // J (fixed value)
-    const gpuTotalEnergy = 915.13; // J (fixed value)
-    const maxEnergy = 1000; // J for gauge scale
+    const maxPower = 300; // W for gauge scale
     
-    // Update energy savings display
-    const energyDisplay = document.querySelector('#atomEnergyGauge').closest('.chart-container')?.querySelector('.metric-value');
-    if (energyDisplay) {
-        const energySavings = (gpuTotalEnergy / npuTotalEnergy).toFixed(1);
-        energyDisplay.textContent = `${energySavings}x`;
-    }
-    
-    // ATOM NPU Energy Gauge
+    // ATOM NPU Power Gauge
     const atomCtx = document.getElementById('atomEnergyGauge');
     if (atomCtx) {
-        const atomGaugeValue = document.querySelector('.atom-gauge .gauge-value');
-        if (atomGaugeValue) atomGaugeValue.innerHTML = `${Math.round(npuTotalEnergy)}<span class="unit">J</span>`;
-        
         charts.atomEnergy = new Chart(atomCtx, {
             type: 'doughnut',
             data: {
                 datasets: [{
-                    data: [npuTotalEnergy, maxEnergy - npuTotalEnergy],
+                    data: [0, maxPower],
                     backgroundColor: ['#76ff03', 'rgba(255, 255, 255, 0.1)'],
                     borderWidth: 0,
                     circumference: 270,
@@ -475,20 +460,17 @@ function createEnergyChart() {
                 }
             }
         });
-        console.log('✓ ATOM energy gauge created');
+        console.log('✓ ATOM power gauge created');
     }
     
-    // NVIDIA GPU Energy Gauge
+    // NVIDIA GPU Power Gauge
     const nvidiaCtx = document.getElementById('nvidiaEnergyGauge');
     if (nvidiaCtx) {
-        const nvidiaGaugeValue = document.querySelector('.nvidia-gauge .gauge-value');
-        if (nvidiaGaugeValue) nvidiaGaugeValue.innerHTML = `${Math.round(gpuTotalEnergy)}<span class="unit">J</span>`;
-        
         charts.nvidiaEnergy = new Chart(nvidiaCtx, {
             type: 'doughnut',
             data: {
                 datasets: [{
-                    data: [gpuTotalEnergy, maxEnergy - gpuTotalEnergy],
+                    data: [0, maxPower],
                     backgroundColor: ['#b794f6', 'rgba(255, 255, 255, 0.1)'],
                     borderWidth: 0,
                     circumference: 270,
@@ -505,7 +487,7 @@ function createEnergyChart() {
                 }
             }
         });
-        console.log('✓ NVIDIA energy gauge created');
+        console.log('✓ NVIDIA power gauge created');
     }
 }
 
@@ -521,6 +503,7 @@ function startAnimationLoop() {
     animationState.currentIndex = 0;
     
     const metrics = calculateMetrics();
+    const maxPower = 300; // W for gauge scale
     
     // Fixed interval: update every 0.5 seconds
     const updateInterval = 500; // 500ms = 0.5 seconds
@@ -530,13 +513,12 @@ function startAnimationLoop() {
     animationState.intervalId = setInterval(() => {
         const idx = animationState.currentIndex;
         
-        // Get current GPU power and FPS from gpu_data.json
+        // Get current frame data (same index for both charts to ensure sync)
         const gpuIdx = Math.min(idx, gpuData.frame_data.length - 1);
+        const npuIdx = Math.min(idx, npuData.frame_data.length - 1);
+        
         const gpuPower = gpuData.frame_data[gpuIdx].power_w;
         const gpuFps = gpuData.frame_data[gpuIdx].fps;
-        
-        // Get current NPU power and FPS from npu_data.json
-        const npuIdx = Math.min(idx, npuData.frame_data.length - 1);
         const npuPower = npuData.frame_data[npuIdx].power_w;
         const npuFps = npuData.frame_data[npuIdx].fps;
         
@@ -549,6 +531,39 @@ function startAnimationLoop() {
         const performanceAdvantageDisplay = document.querySelector('#performanceChart')?.closest('.chart-container')?.querySelector('.metric-value');
         if (performanceAdvantageDisplay) {
             performanceAdvantageDisplay.textContent = `${npuAdvantage.toFixed(1)}x`;
+        }
+        
+        // Update Energy Savings display (Power ratio)
+        const powerSavings = gpuPower / npuPower;
+        const energyDisplay = document.querySelector('#atomEnergyGauge')?.closest('.chart-container')?.querySelector('.metric-value');
+        if (energyDisplay) {
+            energyDisplay.textContent = `${powerSavings.toFixed(1)}x`;
+        }
+        
+        // Update NPU power gauge (real-time power consumption)
+        if (charts.atomEnergy) {
+            const atomGaugeValue = document.querySelector('.atom-gauge .gauge-value');
+            if (atomGaugeValue) {
+                atomGaugeValue.innerHTML = `${Math.round(npuPower)}<span class="unit">W</span>`;
+            }
+            charts.atomEnergy.data.datasets[0].data = [
+                npuPower, 
+                Math.max(0, maxPower - npuPower)
+            ];
+            charts.atomEnergy.update('none');
+        }
+        
+        // Update GPU power gauge (real-time power consumption)
+        if (charts.nvidiaEnergy) {
+            const nvidiaGaugeValue = document.querySelector('.nvidia-gauge .gauge-value');
+            if (nvidiaGaugeValue) {
+                nvidiaGaugeValue.innerHTML = `${Math.round(gpuPower)}<span class="unit">W</span>`;
+            }
+            charts.nvidiaEnergy.data.datasets[0].data = [
+                gpuPower, 
+                Math.max(0, maxPower - gpuPower)
+            ];
+            charts.nvidiaEnergy.update('none');
         }
         
         // Update performance chart (efficiency) - shift left and add new data
