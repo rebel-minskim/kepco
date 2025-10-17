@@ -19,9 +19,43 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Title and description
-st.title("🎥 YOLO11 Live Inference Application")
-st.markdown("Real-time object detection using YOLOv11")
+# Custom CSS for header styling
+st.markdown("""
+    <style>
+    .header-container {
+        background-color: #ffffff;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .header-logo {
+        height: 40px;
+        margin-right: 20px;
+    }
+    .header-divider {
+        border: none;
+        border-top: 2px solid #e0e0e0;
+        margin: 0 0 20px 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Header with Logo
+col_logo, col_title = st.columns([1, 5])
+
+with col_logo:
+    try:
+        st.image("logo_rebellions.png", width=150)
+    except:
+        st.write("🚀 Rebellions")
+
+with col_title:
+    st.title("YOLO11 Live Inference Application")
+    st.markdown("Real-time object detection using YOLOv11")
+
+# Horizontal divider line
+st.markdown("<hr class='header-divider'>", unsafe_allow_html=True)
 
 # Sidebar for settings
 st.sidebar.header("⚙️ Settings")
