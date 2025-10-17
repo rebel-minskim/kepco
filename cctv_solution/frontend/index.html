@@ -3,231 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIXPO 2025 - AI Safety Monitoring System</title>
+    <title>NPU vs GPU Performance Comparison</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-section">
-                <h1>
-                    <i class="fas fa-shield-alt"></i>
-                    BIXPO 2025 - AI Safety Monitoring System
-                </h1>
-                <div class="subtitle">
-                    Intelligent CCTV with Advanced Safety Detection
+    <div class="comparison-container">
+        <!-- Top Section: Two Video Panels -->
+        <div class="video-panels">
+            <!-- ATOM NPU Panel -->
+            <div class="video-panel atom-panel">
+                <div class="panel-header-bar">
+                    <div class="device-info">
+                        <div class="device-brand">
+                            <img src="logo_rebellions.svg" alt="Rebellions" style="height: 30px; width: auto;">
+                        </div>
+                        <div class="device-name">ATOM™-Max NPU</div>
+                    </div>
+                </div>
+                <div class="video-wrapper">
+                    <video class="video-player" id="videoPlayer1" autoplay loop muted>
+                        <source src="output_npu.mp4" type="video/mp4">
+                    </video>
                 </div>
             </div>
-            <div class="system-status">
-                <div class="status-indicator active">
-                    <i class="fas fa-circle"></i>
-                    <span>AI Active</span>
-                </div>
-                <div class="live-indicator">
-                    <i class="fas fa-video"></i>
-                    <span>LIVE</span>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <div class="container">
-        <!-- Main Video Section with AI Detection -->
-        <div class="video-section">
-            <div class="video-header">
-                <h2><i class="fas fa-video"></i> Live CCTV Feed</h2>
-                <div class="camera-info">
-                    <span class="camera-location">📍 Building A - Floor 3</span>
-                    <span class="camera-id">CAM-001</span>
-                </div>
-            </div>
-            
-            <div class="video-container">
-                <video class="video-player" id="videoPlayer" controls autoplay loop muted>
-                    <source src="result5_web.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-                
-                <!-- AI Detection Overlays -->
-                <div class="detection-overlay" id="detectionOverlay">
-                    <!-- Person bounding boxes will be added here -->
-                </div>
-                
-                <div class="video-overlay" id="videoOverlay">
-                    <i class="fas fa-circle"></i>
-                    <span>LIVE</span>
-                </div>
-                
-                <div class="video-info" id="videoInfo">
-                    <div class="info-item">
-                        <i class="fas fa-clock"></i>
-                        <span id="currentTime">--:--</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-users"></i>
-                        <span id="personCount">0</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-shield-alt"></i>
-                        <span id="safetyScore">100%</span>
+            <!-- RTX A5000 Panel -->
+            <div class="video-panel nvidia-panel">
+                <div class="panel-header-bar">
+                    <div class="device-info">
+                        <div class="device-brand">
+                            <img src="logo_nvidia.svg" alt="NVIDIA" style="height: 24px; width: auto;">
+                        </div>
+                        <div class="device-name">L40S GPU</div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- AI Detection Classes with Live Counts -->
-            <div class="detection-stats">
-                <div class="panel-header">
-                    <h3><i class="fas fa-brain"></i> AI Detection Classes</h3>
-                </div>
-                <div class="detection-classes">
-                    <div class="class-item person">
-                        <div class="class-icon">
-                            <span class="material-icons">person</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Person</div>
-                            <div class="class-description">Human detection</div>
-                        </div>
-                        <div class="class-count" id="personCount">7</div>
-                    </div>
-                    <div class="class-item fire">
-                        <div class="class-icon">
-                            <span class="material-icons">local_fire_department</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Fire</div>
-                            <div class="class-description">Fire detection</div>
-                        </div>
-                        <div class="class-count" id="fireCount">0</div>
-                    </div>
-                    <div class="class-item smoke-white">
-                        <div class="class-icon">
-                            <span class="material-icons">cloud</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">White Smoke</div>
-                            <div class="class-description">White smoke detection</div>
-                        </div>
-                        <div class="class-count" id="smokeWhiteCount">0</div>
-                    </div>
-                    <div class="class-item smoke-black">
-                        <div class="class-icon">
-                            <span class="material-icons">cloud_queue</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Black Smoke</div>
-                            <div class="class-description">Black smoke detection</div>
-                        </div>
-                        <div class="class-count" id="smokeBlackCount">0</div>
-                    </div>
-                    <div class="class-item smoke-opacity">
-                        <div class="class-icon">
-                            <span class="material-icons">foggy</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Opacity Smoke</div>
-                            <div class="class-description">Opacity smoke detection</div>
-                        </div>
-                        <div class="class-count" id="smokeOpacityCount">0</div>
-                    </div>
-                    <div class="class-item helmet">
-                        <div class="class-icon">
-                            <i class="fas fa-hard-hat"></i>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Helmet</div>
-                            <div class="class-description">Safety helmet detection</div>
-                        </div>
-                        <div class="class-count" id="helmetCount">7</div>
-                    </div>
-                    <div class="class-item ladder">
-                        <div class="class-icon">
-                            <span class="material-symbols-outlined">tools_ladder</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Ladder</div>
-                            <div class="class-description">Ladder work detection</div>
-                        </div>
-                        <div class="class-count" id="ladderCount">0</div>
-                    </div>
-                    <div class="class-item head">
-                        <div class="class-icon">
-                            <span class="material-icons">face</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Head</div>
-                            <div class="class-description">Head detection</div>
-                        </div>
-                        <div class="class-count" id="headCount">1</div>
-                    </div>
-                    <div class="class-item falling">
-                        <div class="class-icon">
-                            <span class="material-symbols-outlined">falling</span>
-                        </div>
-                        <div class="class-info">
-                            <div class="class-name">Falling</div>
-                            <div class="class-description">Fall detection</div>
-                        </div>
-                        <div class="class-count" id="fallingCount">0</div>
-                    </div>
+                <div class="video-wrapper">
+                    <video class="video-player" id="videoPlayer2" autoplay loop muted>
+                        <source src="output_gpu.mp4" type="video/mp4">
+                    </video>
                 </div>
             </div>
         </div>
 
-        <!-- Dashboard Section -->
-        <div class="dashboard-section">
-            <!-- Filters -->
-            <div class="filters-panel">
-                <div class="filter-group">
-                    <label><i class="fas fa-camera"></i> Camera:</label>
-                    <select id="cameraFilter">
-                        <option value="all">All Cameras</option>
-                        <option value="cam001">CAM-001</option>
-                        <option value="cam002">CAM-002</option>
-                        <option value="cam003">CAM-003</option>
-                    </select>
+        <!-- Bottom Section: Three Charts -->
+        <div class="charts-section">
+            <!-- FPS Chart -->
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <h3>Processing Speed</h3>
+                    <div class="legend">
+                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    </div>
                 </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-filter"></i> Event Type:</label>
-                    <select id="eventFilter">
-                        <option value="all">All Events</option>
-                        <option value="no_helmet">No Helmet</option>
-                        <option value="restricted_zone">Restricted Zone</option>
-                        <option value="fall">Fall Detection</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label><i class="fas fa-clock"></i> Time:</label>
-                    <select id="timeFilter">
-                        <option value="all">All Time</option>
-                        <option value="1h">Last Hour</option>
-                        <option value="6h">Last 6 Hours</option>
-                        <option value="24h">Last 24 Hours</option>
-                    </select>
-                </div>
-                <button class="btn secondary" id="clearFilters">
-                    <i class="fas fa-times"></i>
-                    <span>Clear Filters</span>
-                </button>
-            </div>
-
-            <!-- Event List -->
-            <div class="events-panel">
-                <div class="panel-header">
-                    <h3><i class="fas fa-list"></i> Recent Events</h3>
-                    <div class="event-count" id="eventCount">0 events</div>
-                </div>
-                <div class="events-list" id="eventsList">
-                    <!-- Events will be populated here -->
+                <div class="chart-container">
+                    <div class="metric-display">
+                        <span class="metric-label">NPU Advantage</span>
+                        <span class="metric-value">1.8x</span>
+                    </div>
+                    <canvas id="fpsChart"></canvas>
+                    <div class="chart-footer">
+                        <span class="chart-label">Throughput (Imgs/s)</span>
+                        <span class="chart-action"></span>
+                    </div>
                 </div>
             </div>
 
+            <!-- Energy Consumption Chart -->
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <h3>Energy consumption</h3>
+                    <div class="legend">
+                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="metric-display">
+                        <span class="metric-label">Energy Savings</span>
+                        <span class="metric-value">1.7x</span>
+                    </div>
+                    <div class="gauge-wrapper">
+                        <div class="gauge atom-gauge">
+                            <canvas id="atomEnergyGauge"></canvas>
+                            <div class="gauge-label">
+                                <div class="gauge-name">ATOM™-Max</div>
+                                <div class="gauge-value">530<span class="unit">J</span></div>
+                                <div class="gauge-max">Total Energy</div>
+                            </div>
+                        </div>
+                        <div class="gauge nvidia-gauge">
+                            <canvas id="nvidiaEnergyGauge"></canvas>
+                            <div class="gauge-label">
+                                <div class="gauge-name">L40S</div>
+                                <div class="gauge-value">915<span class="unit">J</span></div>
+                                <div class="gauge-max">Total Energy</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Efficiency Chart -->
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <h3>Performance efficiency</h3>
+                    <div class="legend">
+                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="metric-display">
+                        <span class="metric-label">NPU Advantage</span>
+                        <span class="metric-value">1.0x</span>
+                    </div>
+                    <canvas id="performanceChart"></canvas>
+                    <div class="chart-footer">
+                        <span class="chart-label">↑ FPS/Watt</span>
+                        <span class="chart-action">Time →</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
 </html>
+

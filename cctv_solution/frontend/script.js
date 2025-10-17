@@ -1,557 +1,450 @@
-// Global variables
-let loopCount = 0;
-let isPlaying = false;
-let detectionInterval;
-let alertCount = 0;
+// Data storage
+let npuData = null;  // NPU data (npu_data.json)
+let gpuData = null;  // GPU data (gpu_data.json)
+let charts = {};
 
-// AI Detection System
-const detectionSystem = {
-    // Detection rules
-    rules: {
-        noHelmet: {
-            threshold: 0.6,
-            duration: 2000, // 2 seconds
-            cooldown: 60000 // 60 seconds
-        },
-        restrictedZone: {
-            polygon: [
-                { x: 0.6, y: 0.2 }, // Top-right corner
-                { x: 0.8, y: 0.2 },
-                { x: 0.8, y: 0.5 },
-                { x: 0.6, y: 0.5 }
-            ],
-            cooldown: 60000
-        },
-        fall: {
-            aspectRatioThreshold: 0.3, // Height/Width ratio
-            stationaryTime: 3000, // 3 seconds
-            cooldown: 60000
-        }
-    },
-    
-    // Active detections
-    activeDetections: new Map(),
-    
-    // Cooldown tracking
-    cooldowns: new Map(),
-    
-    // Event history
-    events: [],
-    
-    // Statistics
-    stats: {
-        helmetCompliance: 95,
-        incidentCount: 0,
-        fallCount: 0,
-        zoneViolations: 0,
-        personCount: 0
-    }
+// Animation state
+let animationState = {
+    currentIndex: 0,
+    isRunning: false,
+    intervalId: null,
+    maxDataPoints: 50
 };
 
-// Initialize application
-document.addEventListener('DOMContentLoaded', function() {
-    initializeVideoControls();
-    initializeDashboard();
-    startAIDetection();
-    updateCurrentTime();
-    setInterval(updateCurrentTime, 1000);
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Initializing...');
+    
+    // Load data files
+    await loadDataFiles();
+    
+    // Create charts first
+    createFpsChart();
+    createPerformanceChart();
+    createEnergyChart();
+    
+    // Then sync video playback
+    syncVideos();
+    
+    console.log('Initialization complete');
 });
 
-// Initialize video controls
-function initializeVideoControls() {
-    const videoPlayer = document.getElementById('videoPlayer');
-    const playBtn = document.getElementById('playBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const loopBtn = document.getElementById('loopBtn');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const emergencyBtn = document.getElementById('emergencyBtn');
-    const videoOverlay = document.getElementById('videoOverlay');
-    
-    // Play/Pause button
-    if (playBtn) {
-        playBtn.addEventListener('click', () => {
-            if (videoPlayer.paused) {
-                videoPlayer.play();
-                isPlaying = true;
-            } else {
-                videoPlayer.pause();
-                isPlaying = false;
-            }
-        });
-    }
-    
-    // Restart button
-    if (restartBtn) {
-        restartBtn.addEventListener('click', () => {
-            videoPlayer.currentTime = 0;
-            videoPlayer.play();
-            isPlaying = true;
-        });
-    }
-
-    // Loop toggle button
-    if (loopBtn) {
-        loopBtn.addEventListener('click', () => {
-            videoPlayer.loop = !videoPlayer.loop;
-            loopBtn.innerHTML = videoPlayer.loop ? 
-                '<i class="fas fa-sync"></i><span>Loop: ON</span>' : 
-                '<i class="fas fa-sync"></i><span>Loop: OFF</span>';
-            loopBtn.classList.toggle('active', videoPlayer.loop);
-        });
-    }
-    
-    // Fullscreen button
-    if (fullscreenBtn) {
-        fullscreenBtn.addEventListener('click', () => {
-            if (videoPlayer.requestFullscreen) {
-                videoPlayer.requestFullscreen();
-            } else if (videoPlayer.webkitRequestFullscreen) {
-                videoPlayer.webkitRequestFullscreen();
-            } else if (videoPlayer.msRequestFullscreen) {
-                videoPlayer.msRequestFullscreen();
-            }
-        });
-    }
-    
-    // Emergency button
-    if (emergencyBtn) {
-        emergencyBtn.addEventListener('click', () => {
-            triggerEmergencyAlert();
-        });
-    }
-    
-    videoPlayer.addEventListener('play', () => {
-        if (videoOverlay) {
-            videoOverlay.innerHTML = '<i class="fas fa-circle"></i><span>LIVE</span>';
-        }
-        if (playBtn) {
-            playBtn.innerHTML = '<i class="fas fa-pause"></i><span>Pause</span>';
-        }
-        isPlaying = true;
-    });
-    
-    videoPlayer.addEventListener('pause', () => {
-        if (videoOverlay) {
-            videoOverlay.innerHTML = '<i class="fas fa-pause"></i><span>PAUSED</span>';
-        }
-        if (playBtn) {
-            playBtn.innerHTML = '<i class="fas fa-play"></i><span>Play</span>';
-        }
-        isPlaying = false;
-    });
-    
-    videoPlayer.addEventListener('ended', () => {
-        if (videoPlayer.loop) {
-            if (videoOverlay) {
-                videoOverlay.innerHTML = '<i class="fas fa-sync"></i><span>RESTARTING...</span>';
-            }
-            loopCount++;
-        } else {
-            if (videoOverlay) {
-                videoOverlay.innerHTML = '<i class="fas fa-stop"></i><span>ENDED</span>';
-            }
-            isPlaying = false;
-        }
-    });
-
-    // Handle video loading
-    videoPlayer.addEventListener('loadeddata', () => {
-        console.log('📹 Video loaded and ready to play');
-        if (videoOverlay) {
-            videoOverlay.innerHTML = '<i class="fas fa-circle"></i><span>LIVE</span>';
-        }
-    });
-
-    videoPlayer.addEventListener('error', (e) => {
-        console.error('❌ Video error:', e);
-        if (videoOverlay) {
-            videoOverlay.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>ERROR</span>';
-        }
-    });
-}
-
-// Initialize dashboard
-function initializeDashboard() {
-    setupFilters();
-    addSampleEvents();
-}
-
-// Setup filter functionality
-function setupFilters() {
-    const cameraFilter = document.getElementById('cameraFilter');
-    const eventFilter = document.getElementById('eventFilter');
-    const timeFilter = document.getElementById('timeFilter');
-    const clearFilters = document.getElementById('clearFilters');
-    
-    [cameraFilter, eventFilter, timeFilter].forEach(filter => {
-        filter.addEventListener('change', applyFilters);
-    });
-    
-    clearFilters.addEventListener('click', () => {
-        cameraFilter.value = 'all';
-        eventFilter.value = 'all';
-        timeFilter.value = 'all';
-        applyFilters();
-    });
-}
-
-// Apply filters to events
-function applyFilters() {
-    const cameraFilter = document.getElementById('cameraFilter').value;
-    const eventFilter = document.getElementById('eventFilter').value;
-    const timeFilter = document.getElementById('timeFilter').value;
-    
-    const eventsList = document.getElementById('eventsList');
-    const allEvents = eventsList.querySelectorAll('.event-item');
-    
-    allEvents.forEach(event => {
-        let show = true;
+// Load JSON data files
+async function loadDataFiles() {
+    try {
+        // Load NPU data
+        const npuDataResponse = await fetch('npu_data.json');
+        npuData = await npuDataResponse.json();
+        console.log('✓ NPU data loaded:', npuData.frame_data.length, 'frames');
         
-        // Camera filter
-        if (cameraFilter !== 'all') {
-            const eventCamera = event.dataset.camera;
-            if (eventCamera !== cameraFilter) show = false;
-        }
+        // Load GPU data
+        const gpuDataResponse = await fetch('gpu_data.json');
+        gpuData = await gpuDataResponse.json();
+        console.log('✓ GPU data loaded:', gpuData.frame_data.length, 'frames');
         
-        // Event type filter
-        if (eventFilter !== 'all') {
-            const eventType = event.dataset.type;
-            if (eventType !== eventFilter) show = false;
-        }
-        
-        // Time filter
-        if (timeFilter !== 'all') {
-            const eventTime = new Date(event.dataset.timestamp);
-            const now = new Date();
-            const timeDiff = now - eventTime;
-            
-            switch (timeFilter) {
-                case '1h':
-                    if (timeDiff > 3600000) show = false;
-                    break;
-                case '6h':
-                    if (timeDiff > 21600000) show = false;
-                    break;
-                case '24h':
-                    if (timeDiff > 86400000) show = false;
-                    break;
-            }
-        }
-        
-        event.style.display = show ? 'flex' : 'none';
-    });
-    
-    updateEventCount();
+    } catch (error) {
+        console.error('❌ Error loading data files:', error);
+    }
 }
 
-// Update event count
-function updateEventCount() {
-    const eventsList = document.getElementById('eventsList');
-    const visibleEvents = eventsList.querySelectorAll('.event-item[style*="flex"], .event-item:not([style])');
-    document.getElementById('eventCount').textContent = `${visibleEvents.length} events`;
-}
-
-// Add sample events for demo
-function addSampleEvents() {
-    const sampleEvents = [
-        {
-            type: 'no_helmet',
-            title: 'No Helmet Detected',
-            time: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-            location: 'CAM-001',
-            camera: 'cam001'
+// Calculate metrics
+function calculateMetrics() {
+    const metrics = {
+        npu: {
+            avgPower: 50,
+            avgFps: 36,
+            maxPower: 55
         },
-        {
-            type: 'fall',
-            title: 'Fall Detection Alert',
-            time: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-            location: 'CAM-002',
-            camera: 'cam002'
-        },
-        {
-            type: 'no_helmet',
-            title: 'No Helmet Detected',
-            time: new Date(Date.now() - 12 * 60 * 1000), // 12 minutes ago
-            location: 'CAM-003',
-            camera: 'cam003'
-        },
-        {
-            type: 'fall',
-            title: 'Fall Detection Alert',
-            time: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-            location: 'CAM-001',
-            camera: 'cam001'
-        },
-        {
-            type: 'no_helmet',
-            title: 'No Helmet Detected',
-            time: new Date(Date.now() - 22 * 60 * 1000), // 22 minutes ago
-            location: 'CAM-001',
-            camera: 'cam001'
-        },
-        {
-            type: 'fall',
-            title: 'Fall Detection Alert',
-            time: new Date(Date.now() - 25 * 60 * 1000), // 25 minutes ago
-            location: 'CAM-003',
-            camera: 'cam003'
+        gpu: {
+            avgPower: 0,
+            avgFps: 0,
+            maxPower: 0
         }
-    ];
-    
-    console.log('Adding sample events:', sampleEvents.length);
-    sampleEvents.forEach(event => addEventToList(event));
-    updateEventCount();
-    console.log('Sample events added successfully');
-}
-
-// Add event to list
-function addEventToList(eventData) {
-    const eventsList = document.getElementById('eventsList');
-    console.log('Adding event:', eventData.title, 'to eventsList:', eventsList);
-    const eventItem = document.createElement('div');
-    eventItem.className = `event-item ${eventData.type}`;
-    eventItem.dataset.type = eventData.type;
-    eventItem.dataset.camera = eventData.camera;
-    eventItem.dataset.timestamp = eventData.time.getTime();
-    
-    const timeString = eventData.time.toLocaleTimeString('ko-KR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-    });
-    
-    const icons = {
-        no_helmet: 'material-icons',
-        restricted_zone: 'material-icons',
-        fall: 'material-icons'
     };
     
-    const iconNames = {
-        no_helmet: 'construction',
-        restricted_zone: 'block',
-        fall: 'person_off'
-    };
-    
-    eventItem.innerHTML = `
-        <div class="event-thumbnail">
-            <span class="${icons[eventData.type]}">${iconNames[eventData.type]}</span>
-        </div>
-        <div class="event-content">
-            <div class="event-title">${eventData.title}</div>
-            <div class="event-time">${timeString}</div>
-            <div class="event-location">${eventData.location}</div>
-        </div>
-        <button class="event-play-btn" onclick="playEvent('${eventData.type}')">
-            <i class="fas fa-play"></i>
-        </button>
-    `;
-    
-    eventsList.insertBefore(eventItem, eventsList.firstChild);
-    
-    // Keep only last 20 events
-    while (eventsList.children.length > 20) {
-        eventsList.removeChild(eventsList.lastChild);
+    // Calculate NPU metrics from npu_data.json
+    if (npuData) {
+        metrics.npu.avgPower = npuData.statistics.power_w.mean;
+        metrics.npu.maxPower = npuData.statistics.power_w.max;
+        metrics.npu.avgFps = npuData.statistics.fps.mean;
     }
     
-    updateEventCount();
-}
-
-// Play event (simulate jumping to event time)
-function playEvent(eventType) {
-    const videoPlayer = document.getElementById('videoPlayer');
-    // Simulate jumping to a specific time for the event
-    videoPlayer.currentTime = Math.random() * videoPlayer.duration;
-    videoPlayer.play();
-}
-
-// Start AI detection simulation
-function startAIDetection() {
-    detectionInterval = setInterval(() => {
-        simulateAIDetection();
-    }, 1000);
-}
-
-// Simulate AI detection
-function simulateAIDetection() {
-    // Simulate person detection
-    const personCount = Math.floor(Math.random() * 4) + 1;
-    detectionSystem.stats.personCount = personCount;
-    document.getElementById('personCount').textContent = personCount;
-    
-    // Simulate detections based on rules
-    if (Math.random() < 0.1) { // 10% chance per second
-        const detectionType = ['no_helmet', 'restricted_zone', 'fall'][Math.floor(Math.random() * 3)];
-        triggerDetection(detectionType);
+    // Calculate GPU metrics from gpu_data.json
+    if (gpuData) {
+        metrics.gpu.avgPower = gpuData.statistics.power_w.mean;
+        metrics.gpu.maxPower = gpuData.statistics.power_w.max;
+        metrics.gpu.avgFps = gpuData.statistics.fps.mean;
     }
     
-    // Update live bounding boxes
-    updateLiveDetections();
+    // Calculate efficiency
+    metrics.npu.efficiency = metrics.npu.avgFps / metrics.npu.avgPower;
+    metrics.gpu.efficiency = metrics.gpu.avgFps / metrics.gpu.avgPower;
+    metrics.npu.energyPerFrame = metrics.npu.avgPower / metrics.npu.avgFps;
+    metrics.gpu.energyPerFrame = metrics.gpu.avgPower / metrics.gpu.avgFps;
+    metrics.efficiencyMultiplier = (metrics.npu.efficiency / metrics.gpu.efficiency).toFixed(1);
+    metrics.energyMultiplier = (metrics.gpu.energyPerFrame / metrics.npu.energyPerFrame).toFixed(1);
+    
+    return metrics;
 }
 
-// Trigger specific detection
-function triggerDetection(type) {
-    const personId = `person_${Date.now()}`;
-    const cooldownKey = `${type}_${personId}`;
+// Sync videos
+function syncVideos() {
+    const video1 = document.getElementById('videoPlayer1');
+    const video2 = document.getElementById('videoPlayer2');
     
-    // Check cooldown
-    if (detectionSystem.cooldowns.has(cooldownKey)) {
+    if (!video1 || !video2) {
+        console.log('Videos not found');
         return;
     }
     
-    // Set cooldown
-    detectionSystem.cooldowns.set(cooldownKey, Date.now());
-    setTimeout(() => {
-        detectionSystem.cooldowns.delete(cooldownKey);
-    }, detectionSystem.rules[type].cooldown);
+    video1.addEventListener('play', () => {
+        video2.play();
+        startAnimationLoop();
+    });
     
-    // Create detection
-    const detection = {
-        id: personId,
-        type: type,
-        timestamp: Date.now(),
-        bbox: generateRandomBbox(),
-        score: 0.7 + Math.random() * 0.3
-    };
+    video1.addEventListener('pause', () => {
+        video2.pause();
+        stopAnimationLoop();
+    });
     
-    detectionSystem.activeDetections.set(personId, detection);
+    video1.addEventListener('seeked', () => {
+        video2.currentTime = video1.currentTime;
+        animationState.currentIndex = 0;
+    });
     
-    // Add to events list
-    const eventData = {
-        type: type,
-        title: getDetectionTitle(type),
-        time: new Date(),
-        location: 'CAM-001',
-        camera: 'cam001'
-    };
-    
-    addEventToList(eventData);
-    
-    // Update statistics
-    updateStatsForDetection(type);
-    
-    // Show detection overlay
-    showDetectionOverlay(detection);
-    
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-        hideDetectionOverlay(personId);
-    }, 5000);
-}
-
-// Generate random bounding box
-function generateRandomBbox() {
-    return {
-        x: Math.random() * 0.6 + 0.1,
-        y: Math.random() * 0.6 + 0.1,
-        width: 0.1 + Math.random() * 0.2,
-        height: 0.15 + Math.random() * 0.3
-    };
-}
-
-// Get detection title
-function getDetectionTitle(type) {
-    const titles = {
-        no_helmet: 'No Helmet Detected',
-        restricted_zone: 'Restricted Zone Violation',
-        fall: 'Fall Detection Alert'
-    };
-    return titles[type] || 'Unknown Detection';
-}
-
-// Update statistics for detection
-function updateStatsForDetection(type) {
-    // Statistics are now handled by the detection classes display
-    // This function is kept for compatibility but doesn't update UI
-}
-
-// Show detection overlay
-function showDetectionOverlay(detection) {
-    const overlay = document.getElementById('detectionOverlay');
-    const bbox = detection.bbox;
-    
-    const bboxElement = document.createElement('div');
-    bboxElement.className = `person-bbox ${detection.type}`;
-    bboxElement.id = `bbox_${detection.id}`;
-    bboxElement.style.left = (bbox.x * 100) + '%';
-    bboxElement.style.top = (bbox.y * 100) + '%';
-    bboxElement.style.width = (bbox.width * 100) + '%';
-    bboxElement.style.height = (bbox.height * 100) + '%';
-    
-    const label = document.createElement('div');
-    label.className = `person-label ${detection.type}`;
-    label.textContent = getDetectionTitle(detection.type);
-    bboxElement.appendChild(label);
-    
-    overlay.appendChild(bboxElement);
-}
-
-// Hide detection overlay
-function hideDetectionOverlay(personId) {
-    const bboxElement = document.getElementById(`bbox_${personId}`);
-    if (bboxElement) {
-        bboxElement.remove();
-    }
-    detectionSystem.activeDetections.delete(personId);
-}
-
-// Update live detections
-function updateLiveDetections() {
-    // Update existing detection positions (simulate movement)
-    detectionSystem.activeDetections.forEach((detection, personId) => {
-        const bboxElement = document.getElementById(`bbox_${personId}`);
-        if (bboxElement) {
-            // Slight movement simulation
-            const currentBbox = detection.bbox;
-            currentBbox.x += (Math.random() - 0.5) * 0.01;
-            currentBbox.y += (Math.random() - 0.5) * 0.01;
-            
-            // Keep within bounds
-            currentBbox.x = Math.max(0, Math.min(0.8, currentBbox.x));
-            currentBbox.y = Math.max(0, Math.min(0.8, currentBbox.y));
-            
-            bboxElement.style.left = (currentBbox.x * 100) + '%';
-            bboxElement.style.top = (currentBbox.y * 100) + '%';
+    video1.addEventListener('ended', () => {
+        if (video1.loop) {
+            animationState.currentIndex = 0;
         }
     });
+    
+    video1.play().catch(err => console.log('Video autoplay prevented'));
+    video2.play().catch(err => console.log('Video autoplay prevented'));
 }
 
-// Update current time
-function updateCurrentTime() {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('ko-KR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+// Create FPS chart
+function createFpsChart() {
+    // Use fixed values for display
+    const npuFps = 353;  // Fixed NPU FPS
+    const gpuFps = 195;  // Fixed GPU FPS
+    
+    // Create FPS chart
+    const ctx = document.getElementById('fpsChart');
+    if (!ctx) {
+        console.log('FPS chart canvas not found');
+        return;
+    }
+    
+    // Update FPS advantage display
+    const fpsDisplay = document.querySelector('#fpsChart').closest('.chart-container')?.querySelector('.metric-value');
+    if (fpsDisplay) {
+        const fpsRatio = (npuFps / gpuFps).toFixed(1);
+        fpsDisplay.textContent = `${fpsRatio}x`;
+    }
+    
+    // Create static bar chart
+    charts.fps = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['NPU', 'GPU'],
+            datasets: [{
+                label: 'Throughput (Imgs/s)',
+                data: [npuFps, gpuFps],
+                backgroundColor: ['#76ff03', '#b794f6'],
+                borderWidth: 0,
+                barThickness: 80
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 1000,
+                easing: 'easeInOutQuart'
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { 
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y + ' Imgs/s';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: '#ffffff',
+                        font: { size: 14, weight: 'bold' }
+                    }
+                },
+                y: {
+                    display: true,
+                    min: 0,
+                    max: 400,
+                    grid: { 
+                        color: 'rgba(255, 255, 255, 0.1)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#888888',
+                        font: { size: 12 }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const data = dataset.data[index];
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(data + ' Imgs/s', bar.x, bar.y - 5);
+                    });
+                });
+            }
+        }]
     });
-    document.getElementById('currentTime').textContent = timeString;
+    console.log('✓ FPS chart created');
 }
 
-// Emergency alert function
-function triggerEmergencyAlert() {
-    const eventData = {
-        type: 'fall',
-        title: 'EMERGENCY: Fall Detection',
-        time: new Date(),
-        location: 'CAM-001',
-        camera: 'cam001'
-    };
+// Create performance chart
+function createPerformanceChart() {
+    const ctx = document.getElementById('performanceChart');
+    if (!ctx) {
+        console.log('Performance chart canvas not found');
+        return;
+    }
     
-    addEventToList(eventData);
-    updateStatsForDetection('fall');
+    const metrics = calculateMetrics();
     
-    // Flash the emergency button
-    const emergencyBtn = document.getElementById('emergencyBtn');
-    emergencyBtn.style.animation = 'blink 0.5s infinite';
+    // Update multiplier display
+    const efficiencyDisplay = document.querySelector('#performanceChart').closest('.chart-container')?.querySelector('.metric-value');
+    if (efficiencyDisplay) {
+        efficiencyDisplay.textContent = `${metrics.efficiencyMultiplier}x`;
+    }
     
-    setTimeout(() => {
-        emergencyBtn.style.animation = '';
-    }, 5000);
+    // Create empty chart
+    const labels = Array(animationState.maxDataPoints).fill('');
     
-    // Show notification
-    if (navigator.permissions && Notification.permission === 'granted') {
-        new Notification('Emergency Alert', {
-            body: 'Fall incident detected - Emergency response required!',
-            icon: '/favicon.ico'
+    charts.performance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: `ATOM NPU (${metrics.npu.efficiency.toFixed(2)} FPS/W)`,
+                    data: Array(animationState.maxDataPoints).fill(null),
+                    borderColor: '#76ff03',
+                    backgroundColor: 'rgba(118, 255, 3, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 0
+                },
+                {
+                    label: `L40S GPU (${metrics.gpu.efficiency.toFixed(2)} FPS/W)`,
+                    data: Array(animationState.maxDataPoints).fill(null),
+                    borderColor: '#b794f6',
+                    backgroundColor: 'rgba(183, 148, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    pointHitRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: {
+                mode: null
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: {
+                    display: false,
+                    grid: { display: false }
+                },
+                y: {
+                    display: false,
+                    min: 0,
+                    max: 0.2,
+                    ticks: {
+                        stepSize: 0.00000003
+                    },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+    console.log('✓ Performance chart created');
+}
+
+// Create energy gauges
+function createEnergyChart() {
+    // Use fixed values for display
+    // Calculate total energy: (Frames / FPS) * Power = Total Energy
+    // For 1800 frames video
+    const npuTotalEnergy = 530.07; // J (fixed value)
+    const gpuTotalEnergy = 915.13; // J (fixed value)
+    const maxEnergy = 1000; // J for gauge scale
+    
+    // Update energy savings display
+    const energyDisplay = document.querySelector('#atomEnergyGauge').closest('.chart-container')?.querySelector('.metric-value');
+    if (energyDisplay) {
+        const energySavings = (gpuTotalEnergy / npuTotalEnergy).toFixed(1);
+        energyDisplay.textContent = `${energySavings}x`;
+    }
+    
+    // ATOM NPU Energy Gauge
+    const atomCtx = document.getElementById('atomEnergyGauge');
+    if (atomCtx) {
+        const atomGaugeValue = document.querySelector('.atom-gauge .gauge-value');
+        if (atomGaugeValue) atomGaugeValue.innerHTML = `${Math.round(npuTotalEnergy)}<span class="unit">J</span>`;
+        
+        charts.atomEnergy = new Chart(atomCtx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [npuTotalEnergy, maxEnergy - npuTotalEnergy],
+                    backgroundColor: ['#76ff03', 'rgba(255, 255, 255, 0.1)'],
+                    borderWidth: 0,
+                    circumference: 270,
+                    rotation: 225
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
         });
+        console.log('✓ ATOM energy gauge created');
+    }
+    
+    // NVIDIA GPU Energy Gauge
+    const nvidiaCtx = document.getElementById('nvidiaEnergyGauge');
+    if (nvidiaCtx) {
+        const nvidiaGaugeValue = document.querySelector('.nvidia-gauge .gauge-value');
+        if (nvidiaGaugeValue) nvidiaGaugeValue.innerHTML = `${Math.round(gpuTotalEnergy)}<span class="unit">J</span>`;
+        
+        charts.nvidiaEnergy = new Chart(nvidiaCtx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [gpuTotalEnergy, maxEnergy - gpuTotalEnergy],
+                    backgroundColor: ['#b794f6', 'rgba(255, 255, 255, 0.1)'],
+                    borderWidth: 0,
+                    circumference: 270,
+                    rotation: 225
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+        console.log('✓ NVIDIA energy gauge created');
     }
 }
 
-console.log('🚀 BIXPO 2024 - AI Safety Monitoring System initialized successfully!');
+// Start animation loop
+function startAnimationLoop() {
+    if (animationState.isRunning) return;
+    if (!npuData || !gpuData) {
+        console.log('Cannot start animation: Data not loaded');
+        return;
+    }
+    
+    animationState.isRunning = true;
+    animationState.currentIndex = 0;
+    
+    const metrics = calculateMetrics();
+    
+    // Fixed interval: update every 0.5 seconds
+    const updateInterval = 500; // 500ms = 0.5 seconds
+    
+    console.log('▶ Starting animation with interval:', updateInterval, 'ms');
+    
+    animationState.intervalId = setInterval(() => {
+        const idx = animationState.currentIndex;
+        
+        // Get current GPU power and FPS from gpu_data.json
+        const gpuIdx = Math.min(idx, gpuData.frame_data.length - 1);
+        const gpuPower = gpuData.frame_data[gpuIdx].power_w;
+        const gpuFps = gpuData.frame_data[gpuIdx].fps;
+        
+        // Get current NPU power and FPS from npu_data.json
+        const npuIdx = Math.min(idx, npuData.frame_data.length - 1);
+        const npuPower = npuData.frame_data[npuIdx].power_w;
+        const npuFps = npuData.frame_data[npuIdx].fps;
+        
+        // Calculate real-time efficiency (FPS/Watt)
+        const npuEfficiency = npuFps / npuPower;
+        const gpuEfficiency = gpuFps / gpuPower;
+        
+        // Calculate and update NPU Advantage
+        const npuAdvantage = npuEfficiency / gpuEfficiency;
+        const performanceAdvantageDisplay = document.querySelector('#performanceChart')?.closest('.chart-container')?.querySelector('.metric-value');
+        if (performanceAdvantageDisplay) {
+            performanceAdvantageDisplay.textContent = `${npuAdvantage.toFixed(1)}x`;
+        }
+        
+        // Update performance chart (efficiency) - shift left and add new data
+        if (charts.performance) {
+            const perfData0 = charts.performance.data.datasets[0].data;
+            const perfData1 = charts.performance.data.datasets[1].data;
+            
+            perfData0.shift();
+            perfData0.push(npuEfficiency);
+            perfData1.shift();
+            perfData1.push(gpuEfficiency);
+            
+            charts.performance.update('none');
+        }
+        
+        // Increment and loop
+        animationState.currentIndex++;
+        const maxFrames = Math.min(npuData.frame_data.length, gpuData.frame_data.length);
+        if (animationState.currentIndex >= maxFrames) {
+            animationState.currentIndex = 0;
+        }
+    }, updateInterval);
+}
+
+// Stop animation
+function stopAnimationLoop() {
+    if (animationState.intervalId) {
+        clearInterval(animationState.intervalId);
+        animationState.isRunning = false;
+        console.log('⏸ Animation stopped');
+    }
+}
+
+console.log('🚀 Script loaded');
