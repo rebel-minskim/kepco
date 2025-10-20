@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPU vs GPU Performance Comparison</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="comparison-container">
+        <!-- Top Section: Two Video Panels -->
+        <div class="video-panels">
+            <!-- ATOM NPU Panel -->
+            <div class="video-panel atom-panel">
+                <div class="panel-header-bar">
+                    <div class="device-info">
+                        <div class="device-brand">
+                            <img src="logo_rebellions.svg" alt="Rebellions" style="height: 30px; width: auto;">
+                        </div>
+                        <div class="device-name">ATOM™-Max NPU</div>
+                    </div>
+                </div>
+                <div class="video-wrapper">
+                    <video class="video-player" id="videoPlayer1" autoplay loop muted>
+                        <source src="output_npu.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+
+            <!-- RTX A5000 Panel -->
+            <div class="video-panel nvidia-panel">
+                <div class="panel-header-bar">
+                    <div class="device-info">
+                        <div class="device-brand">
+                            <img src="logo_nvidia.svg" alt="NVIDIA" style="height: 24px; width: auto;">
+                        </div>
+                        <div class="device-name">L40S GPU</div>
+                    </div>
+                </div>
+                <div class="video-wrapper">
+                    <video class="video-player" id="videoPlayer2" autoplay loop muted>
+                        <source src="output_gpu.mp4" type="video/mp4">
+                    </video>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Section: Three Charts -->
+        <div class="charts-section">
+            <!-- FPS Chart -->
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <h3>Processing Speed</h3>
+                    <div class="legend">
+                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="metric-display">
+                        <span class="metric-label">NPU Advantage</span>
+                        <span class="metric-value">1.8x</span>
+                    </div>
+                    <canvas id="fpsChart"></canvas>
+                    <div class="chart-footer">
+                        <span class="chart-label">Throughput (Imgs/s)</span>
+                        <span class="chart-action"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Energy Consumption Chart -->
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <h3>Energy consumption</h3>
+                    <div class="legend">
+                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="metric-display">
+                        <span class="metric-label">Energy Savings</span>
+                        <span class="metric-value">1.7x</span>
+                    </div>
+                    <div class="gauge-wrapper">
+                        <div class="gauge atom-gauge">
+                            <canvas id="atomEnergyGauge"></canvas>
+                            <div class="gauge-label">
+                                <div class="gauge-name">ATOM™-Max</div>
+                                <div class="gauge-value">530<span class="unit">J</span></div>
+                                <div class="gauge-max">Total Energy</div>
+                            </div>
+                        </div>
+                        <div class="gauge nvidia-gauge">
+                            <canvas id="nvidiaEnergyGauge"></canvas>
+                            <div class="gauge-label">
+                                <div class="gauge-name">L40S</div>
+                                <div class="gauge-value">915<span class="unit">J</span></div>
+                                <div class="gauge-max">Total Energy</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Efficiency Chart -->
+            <div class="chart-panel">
+                <div class="chart-header">
+                    <h3>Performance efficiency</h3>
+                    <div class="legend">
+                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="metric-display">
+                        <span class="metric-label">NPU Advantage</span>
+                        <span class="metric-value">1.0x</span>
+                    </div>
+                    <canvas id="performanceChart"></canvas>
+                    <div class="chart-footer">
+                        <span class="chart-label">↑ FPS/Watt</span>
+                        <span class="chart-action">Time →</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
