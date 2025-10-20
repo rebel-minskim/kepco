@@ -2,17 +2,19 @@
 
 A real-time web dashboard comparing ATOM™-Max NPU and NVIDIA L40S GPU performance metrics for AI video processing workloads.
 
-![Dashboard Preview](https://img.shields.io/badge/Status-Live-green)
+![Dashboard Preview](image.png)
 
-## 🎯 Features
+![Status](https://img.shields.io/badge/Status-Live-green)
+
+## Features
 
 - **Dual Video Comparison**: Side-by-side video playback showing NPU and GPU processing results
 - **Real-time Power Monitoring**: Animated gauge charts showing current power consumption
 - **Performance Efficiency Tracking**: Live scrolling graph comparing FPS per Watt
-- **Energy Consumption Analysis**: Real-time power usage visualization
+- **Power Usage Analysis**: Real-time power draw visualization in Watts
 - **Auto-calculated Metrics**: Automatically computes efficiency multipliers from data
 
-## 📊 Dashboard Components
+## Dashboard Components
 
 ### 1. Video Panels (Top)
 - **Left**: ATOM™-Max NPU processing output (36 Imgs/s)
@@ -29,12 +31,12 @@ A real-time web dashboard comparing ATOM™-Max NPU and NVIDIA L40S GPU performa
 - Scrolls from right to left
 - Shows efficiency advantage multiplier (e.g., "6.3x")
 
-### 4. Energy Consumption (Bottom Right)
-- Line graph showing power usage over time
+### 4. Power Usage (Bottom Right)
+- Line graph showing power draw over time
 - Real-time watts measurement
-- Compares energy efficiency
+- Compares power consumption between devices
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Modern web browser (Chrome, Firefox, Safari, Edge)
@@ -43,7 +45,7 @@ A real-time web dashboard comparing ATOM™-Max NPU and NVIDIA L40S GPU performa
 
 ### Two Ways to Use:
 
-#### 🌟 Option 1: Standalone (Recommended for Offline Use)
+#### Option 1: Standalone (Recommended for Offline Use)
 
 **No server needed! Works completely offline.**
 
@@ -60,12 +62,12 @@ A real-time web dashboard comparing ATOM™-Max NPU and NVIDIA L40S GPU performa
 3. **Done!** Works offline, no internet needed.
 
 **When to use:**
-- ✅ Presenting offline (no internet)
-- ✅ Don't want to start a server every time
-- ✅ Simple double-click to open
-- ✅ Share single HTML file (+ videos)
+- Presenting offline (no internet)
+- Don't want to start a server every time
+- Simple double-click to open
+- Share single HTML file (+ videos)
 
-#### 🔧 Option 2: With Web Server
+#### Option 2: With Web Server
 
 **Better for development and frequent data updates.**
 
@@ -85,9 +87,9 @@ A real-time web dashboard comparing ATOM™-Max NPU and NVIDIA L40S GPU performa
    ```
 
 **When to use:**
-- ✅ Developing and testing
-- ✅ Frequently updating data
-- ✅ Don't want to rebuild after each change
+- Developing and testing
+- Frequently updating data
+- Don't want to rebuild after each change
 
 ### Alternative: Using Node.js
 
@@ -113,7 +115,7 @@ frontend/
 └── gpu_fps.json
 ```
 
-## 📖 How to Use
+## How to Use
 
 1. **Load the Page**: Open `http://localhost:8080/index.html` in your browser
 
@@ -131,7 +133,7 @@ frontend/
 
 5. **Loop**: Videos and data automatically loop for continuous monitoring
 
-## 🔄 Updating Data (Standalone Version)
+## Updating Data (Standalone Version)
 
 If you're using the standalone version and want to update your data:
 
@@ -148,7 +150,7 @@ python3 build_standalone.py
 
 **That's it!** All your new data is embedded in the HTML file.
 
-## 🔧 Customizing with Your Data
+## Customizing with Your Data
 
 ### Step 1: Prepare Your Video Files
 
@@ -243,7 +245,7 @@ Edit `index.html` to change device names:
 
 Reload the page to see your data!
 
-## 📐 Calculated Metrics
+## Calculated Metrics
 
 The dashboard automatically calculates:
 
@@ -265,7 +267,7 @@ Multiplier = NPU Efficiency / GPU Efficiency
 Shows how many times more efficient NPU is
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Issue: CORS Error (Cross-Origin Request Blocked)
 
@@ -324,7 +326,7 @@ npx http-server -p 8080
 3. Ensure sample counts are greater than 0
 4. Recalculate: Open console and check logged metrics
 
-## 📊 Data Collection Tips
+## Data Collection Tips
 
 ### Collecting Power Data
 
@@ -353,7 +355,7 @@ For best results:
 - Use same video file for demo as was processed
 - Match data duration to video duration
 
-## 🎨 Customization
+## Customization
 
 ### Changing Colors
 
@@ -382,7 +384,7 @@ Edit `script.js`:
 maxDataPoints: 60  // Show last 60 samples
 ```
 
-## 📁 File Structure
+## File Structure
 
 ```
 frontend/
@@ -403,7 +405,7 @@ frontend/
     └── gpu_fps.json    # GPU FPS data
 ```
 
-## 🔍 Browser Console Commands
+## Browser Console Commands
 
 Open console (F12) and try:
 
@@ -422,21 +424,21 @@ stopAnimationLoop();
 startAnimationLoop();
 ```
 
-## 📝 Requirements
+## Requirements
 
 - **Browser**: Modern browser with ES6 support
 - **Web Server**: Python 3.x, Node.js, or any HTTP server
 - **Video Codec**: H.264 (MP4)
 - **Data Format**: JSON files with specified structure
 
-## 🚫 Limitations
+## Limitations
 
 - Requires local web server (cannot open file:// directly)
 - Videos must be H.264 encoded
 - Maximum recommended data points: ~1000 samples
 - Best viewed on desktop/laptop (responsive design limited)
 
-## 💡 Tips for Best Results
+## Tips for Best Results
 
 1. **Video Quality**: Use high-quality H.264 encoded videos
 2. **Data Sync**: Ensure data duration matches video duration
@@ -444,7 +446,7 @@ startAnimationLoop();
 4. **File Size**: Keep videos under 100MB for better loading
 5. **Testing**: Always test locally before deploying
 
-## 🆘 Support
+## Support
 
 **Debug Checklist:**
 - [ ] Web server is running
@@ -460,7 +462,7 @@ startAnimationLoop();
 3. Test with sample data first
 4. Ensure all JSON files have correct structure
 
-## 📄 License
+## License
 
 Copyright © 2025 Rebellions Inc.
 
@@ -482,5 +484,4 @@ python3 -m json.tool data.json
 open http://localhost:8080/index.html
 ```
 
-**Made with ❤️ for AI Performance Analysis**
-
+**Made for AI Performance Analysis**
