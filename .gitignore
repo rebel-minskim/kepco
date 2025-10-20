@@ -1,0 +1,73 @@
+# Virtual Environment
+venv/
+env/
+*.venv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyTorch models (except project models)
+*.pt
+!yolov11.pt
+*.pth
+*.weights
+
+# RBLN models (except project models)
+*.rbln
+!yolov11.rbln
+
+# Logs
+logs/
+*.log
+nohup.out
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+.directory
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Streamlit
+.streamlit/
+
+# Video/Image files (optional - uncomment if needed)
+# *.mp4
+# *.avi
+# *.mov
+# *.mkv
+# *.jpg
+# *.jpeg
+# *.png
+
