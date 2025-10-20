@@ -1,0 +1,42 @@
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Python (if any scripts)
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Node modules (if using Node tools)
+node_modules/
+package-lock.json
+
+# Build outputs
+*.min.js
+*.min.css
+
+# Logs
+*.log
+npm-debug.log*
+
+# Large video files (optional - uncomment if needed)
+# assets/videos/*.mp4
+# assets/videos/*.avi
+
+# Large data files (optional - uncomment if needed)
+# data/*.json
+

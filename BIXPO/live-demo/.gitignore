@@ -28,13 +28,13 @@ wheels/
 
 # PyTorch models (except project models)
 *.pt
-!yolov11.pt
+!models/yolov11.pt
 *.pth
 *.weights
 
 # RBLN models (except project models)
 *.rbln
-!yolov11.rbln
+!models/yolov11.rbln
 
 # Logs
 logs/
