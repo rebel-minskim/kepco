@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+*.venv
+
+# C++ Build
+build/
+cmake-build-*/
+*.o
+*.out
+*.exe
+bin/
+lib/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Models
+*.pt
+*.rbln
+!*/yolov11.pt
+!*/yolov11.rbln
+
+# Output files
+output/
+*.mp4
+*.avi
+*.mov
+!media/*.mp4
+
+# Protobuf generated files
+*.pb.cc
+*.pb.h
+*.grpc.pb.cc
+*.grpc.pb.h
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+.directory
+
+# Logs
+*.log
+nohup.out
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+

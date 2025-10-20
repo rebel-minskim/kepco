@@ -201,9 +201,9 @@ class ConcurrentTritonClient:
         print(f"Concurrent workers: {self.max_concurrent_requests}")
         print(f"Target FPS: 90.0")
         if avg_fps >= 90:
-            print(f"✅ SUCCESS: Achieved target FPS!")
+            print(f"SUCCESS: Achieved target FPS!")
         else:
-            print(f"❌ TARGET NOT MET: Need 90 FPS, got {avg_fps:.1f} FPS")
+            print(f"TARGET NOT MET: Need 90 FPS, got {avg_fps:.1f} FPS")
         print(f"="*60)
     
     def run_concurrent_inference(self, video_path: str, output_path: Optional[str] = None, no_drop: bool = False):
@@ -326,10 +326,10 @@ class ConcurrentTritonClient:
             print(f"Total frames processed: {frame_count}")
             print(f"Dropped frames: {dropped_frames}")
             if dropped_frames > 0:
-                print(f"⚠️  WARNING: {dropped_frames} frames were dropped!")
-                print(f"💡 Consider using --no-drop or increasing --queue-size")
+                print(f"WARNING: {dropped_frames} frames were dropped!")
+                print(f"Consider using --no-drop or increasing --queue-size")
             else:
-                print(f"✅ No frames were dropped!")
+                print(f"No frames were dropped!")
             print(f"="*60)
             print("Processing completed!")
 

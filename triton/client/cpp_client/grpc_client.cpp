@@ -31,9 +31,9 @@ std::shared_ptr<grpc::Channel> GrpcClient::create_channel(const std::string& ser
         bool connected = channel->WaitForConnected(deadline);
         
         if (connected) {
-            std::cout << "✅ gRPC channel connected to server" << std::endl;
+            std::cout << "gRPC channel connected to server" << std::endl;
         } else {
-            std::cout << "⚠️ gRPC channel created but connection not verified" << std::endl;
+            std::cout << "WARNING: gRPC channel created but connection not verified" << std::endl;
             std::cout << "   (Server may still be starting or not fully ready)" << std::endl;
         }
         

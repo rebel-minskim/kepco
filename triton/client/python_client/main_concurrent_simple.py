@@ -220,10 +220,10 @@ class ConcurrentSimpleClient:
         print(f"Concurrent requests: {self.max_concurrent}")
         print(f"Target FPS: 90.0")
         if avg_fps >= 90:
-            print(f"✅ SUCCESS: Achieved target FPS!")
+            print(f"SUCCESS: Achieved target FPS!")
         else:
-            print(f"❌ TARGET NOT MET: Need 90 FPS, got {avg_fps:.1f} FPS")
-            print(f"💡 Inference time: {avg_inference:.1f}ms (target: <11ms for 90fps)")
+            print(f"TARGET NOT MET: Need 90 FPS, got {avg_fps:.1f} FPS")
+            print(f"Inference time: {avg_inference:.1f}ms (target: <11ms for 90fps)")
         print(f"="*60)
         
         # Cleanup

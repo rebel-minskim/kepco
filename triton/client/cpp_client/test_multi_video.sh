@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "========================================="
-echo "🎬 멀티 비디오 동시 처리 테스트"
+echo "Multi-Video Concurrent Processing Test"
 echo "========================================="
 
 cd build
@@ -13,7 +13,7 @@ OUTPUT_DIR="../output"
 mkdir -p $OUTPUT_DIR
 
 echo ""
-echo "1️⃣  단일 비디오 (기준)"
+echo "TEST 1: Single Video (Baseline)"
 echo "-----------------------------------------"
 START=$(date +%s)
 START_NS=$(date +%N)
@@ -25,7 +25,7 @@ SINGLE_TIME=$(echo "$OUTPUT" | grep "Total time:" | awk '{print $3}' | sed 's/s/
 END=$(date +%s)
 END_NS=$(date +%N)
 
-# 시간 계산
+# Calculate time
 ELAPSED=$((END - START))
 ELAPSED_NS=$((END_NS - START_NS))
 if [ $ELAPSED_NS -lt 0 ]; then
@@ -35,16 +35,16 @@ fi
 TEST1_TIME=$(python3 -c "print(f'{$ELAPSED + $ELAPSED_NS / 1e9:.2f}')")
 
 echo "Average FPS: $SINGLE_FPS"
-echo "⏱️  테스트 소요 시간: ${TEST1_TIME}초"
+echo "Test duration: ${TEST1_TIME}s"
 echo "Total throughput: $SINGLE_FPS inferences/sec"
 
 echo ""
-echo "2️⃣  2개 비디오 동시 처리 (각 8 threads)"
+echo "TEST 2: 2 Videos Concurrent (8 threads each)"
 echo "-----------------------------------------"
 START=$(date +%s)
 START_NS=$(date +%N)
 
-# 2개 비디오 병렬 실행 및 결과 저장
+# Run 2 videos in parallel
 TEMP_DIR="$OUTPUT_DIR/multi_test_$$"
 mkdir -p $TEMP_DIR
 
@@ -58,7 +58,7 @@ wait $PID1 $PID2
 END=$(date +%s)
 END_NS=$(date +%N)
 
-# 시간 계산
+# Calculate time
 ELAPSED=$((END - START))
 ELAPSED_NS=$((END_NS - START_NS))
 if [ $ELAPSED_NS -lt 0 ]; then
@@ -67,21 +67,21 @@ if [ $ELAPSED_NS -lt 0 ]; then
 fi
 TOTAL_TIME=$(python3 -c "print(f'{$ELAPSED + $ELAPSED_NS / 1e9:.2f}')")
 
-# FPS 추출
+# Extract FPS
 FPS1=$(grep "Average FPS:" $TEMP_DIR/out1.txt | awk '{print $3}')
 FPS2=$(grep "Average FPS:" $TEMP_DIR/out2.txt | awk '{print $3}')
 
 echo "Video 1: $FPS1 FPS"
 echo "Video 2: $FPS2 FPS"
-echo "⏱️  테스트 소요 시간: ${TOTAL_TIME}초"
+echo "Test duration: ${TOTAL_TIME}s"
 
-# 총 throughput 계산 (900 frames * 2 videos = 1800 frames)
+# Calculate total throughput (900 frames * 2 videos = 1800 frames)
 TOTAL_THROUGHPUT=$(python3 -c "print(f'{1800 / $TOTAL_TIME:.2f}')")
-echo "📊 총 throughput: $TOTAL_THROUGHPUT inferences/sec"
+echo "Total throughput: $TOTAL_THROUGHPUT inferences/sec"
 TEST2_TIME=$TOTAL_TIME
 
 echo ""
-echo "3️⃣  4개 비디오 동시 처리 (각 8 threads)"
+echo "TEST 3: 4 Videos Concurrent (8 threads each)"
 echo "-----------------------------------------"
 START=$(date +%s)
 START_NS=$(date +%N)
@@ -95,13 +95,12 @@ PID3=$!
 ./bin/triton_client parallel $VIDEO $OUTPUT_DIR/multi4.mp4 8 2>&1 > $TEMP_DIR/out4.txt &
 PID4=$!
 
-
 wait $PID1 $PID2 $PID3 $PID4
 
 END=$(date +%s)
 END_NS=$(date +%N)
 
-# 시간 계산
+# Calculate time
 ELAPSED=$((END - START))
 ELAPSED_NS=$((END_NS - START_NS))
 if [ $ELAPSED_NS -lt 0 ]; then
@@ -110,7 +109,7 @@ if [ $ELAPSED_NS -lt 0 ]; then
 fi
 TOTAL_TIME=$(python3 -c "print(f'{$ELAPSED + $ELAPSED_NS / 1e9:.2f}')")
 
-# FPS 추출
+# Extract FPS
 FPS1=$(grep "Average FPS:" $TEMP_DIR/out1.txt | awk '{print $3}')
 FPS2=$(grep "Average FPS:" $TEMP_DIR/out2.txt | awk '{print $3}')
 FPS3=$(grep "Average FPS:" $TEMP_DIR/out3.txt | awk '{print $3}')
@@ -120,42 +119,41 @@ echo "Video 1: $FPS1 FPS"
 echo "Video 2: $FPS2 FPS"
 echo "Video 3: $FPS3 FPS"
 echo "Video 4: $FPS4 FPS"
-echo "⏱️  테스트 소요 시간: ${TOTAL_TIME}초"
+echo "Test duration: ${TOTAL_TIME}s"
 
-# 총 throughput 계산 (900 frames * 4 videos = 3600 frames)
+# Calculate total throughput (900 frames * 4 videos = 3600 frames)
 TOTAL_THROUGHPUT=$(python3 -c "print(f'{3600 / $TOTAL_TIME:.2f}')")
-echo "📊 총 throughput: $TOTAL_THROUGHPUT inferences/sec"
+echo "Total throughput: $TOTAL_THROUGHPUT inferences/sec"
 TEST3_TIME=$TOTAL_TIME
 
-# 정리
+# Cleanup
 rm -rf $TEMP_DIR
 
 echo ""
 echo "========================================="
-echo "📊 최종 결과 요약"
+echo "FINAL SUMMARY"
 echo "========================================="
-echo "1️⃣  단일 비디오:"
-echo "   • FPS: $SINGLE_FPS"
-echo "   • Throughput: $SINGLE_FPS inferences/sec"
-echo "   • ⏱️  소요 시간: ${TEST1_TIME}초"
+echo "TEST 1 - Single Video:"
+echo "   - FPS: $SINGLE_FPS"
+echo "   - Throughput: $SINGLE_FPS inferences/sec"
+echo "   - Duration: ${TEST1_TIME}s"
 echo ""
-echo "2️⃣  2개 비디오 동시:"
-echo "   • 개별 FPS: 평균 $(python3 -c "print(f'{($FPS1 + $FPS2) / 2:.1f}' if '$FPS1' and '$FPS2' else '?')" 2>/dev/null || echo "?")"
-TOTAL_2=$(python3 -c "print(f'{1800 / $TEST2_TIME:.2f}')") 2>/dev/null || TOTAL_2="계산 실패"
-echo "   • 📊 총 Throughput: $TOTAL_2 inferences/sec"
-IMPROVEMENT_2=$(python3 -c "print(f'{($TOTAL_2 / $SINGLE_FPS - 1) * 100:.1f}')") 2>/dev/null || IMPROVEMENT_2="?"
-echo "   • 향상: $IMPROVEMENT_2%"
-echo "   • ⏱️  소요 시간: ${TEST2_TIME}초"
+echo "TEST 2 - 2 Videos Concurrent:"
+echo "   - Individual FPS: avg $(python3 -c "print(f'{($FPS1 + $FPS2) / 2:.1f}' if '$FPS1' and '$FPS2' else '?')" 2>/dev/null || echo "?")"
+TOTAL_2=$(python3 -c "print(f'{1800 / $TEST2_TIME:.2f}')") 2>/dev/null || TOTAL_2="N/A"
+echo "   - Total Throughput: $TOTAL_2 inferences/sec"
+IMPROVEMENT_2=$(python3 -c "print(f'{($TOTAL_2 / $SINGLE_FPS - 1) * 100:.1f}')") 2>/dev/null || IMPROVEMENT_2="N/A"
+echo "   - Improvement: $IMPROVEMENT_2%"
+echo "   - Duration: ${TEST2_TIME}s"
 echo ""
-echo "3️⃣  4개 비디오 동시:"
-echo "   • 개별 FPS: 평균 $(python3 -c "print(f'{($FPS1 + $FPS2 + $FPS3 + $FPS4) / 4:.1f}' if '$FPS1' and '$FPS2' else '?')" 2>/dev/null || echo "?")"
-TOTAL_4=$(python3 -c "print(f'{3600 / $TEST3_TIME:.2f}')") 2>/dev/null || TOTAL_4="계산 실패"
-echo "   • 📊 총 Throughput: $TOTAL_4 inferences/sec"
-IMPROVEMENT_4=$(python3 -c "print(f'{($TOTAL_4 / $SINGLE_FPS - 1) * 100:.1f}')") 2>/dev/null || IMPROVEMENT_4="?"
-echo "   • 향상: $IMPROVEMENT_4%"
-echo "   • ⏱️  소요 시간: ${TEST3_TIME}초"
+echo "TEST 3 - 4 Videos Concurrent:"
+echo "   - Individual FPS: avg $(python3 -c "print(f'{($FPS1 + $FPS2 + $FPS3 + $FPS4) / 4:.1f}' if '$FPS1' and '$FPS2' else '?')" 2>/dev/null || echo "?")"
+TOTAL_4=$(python3 -c "print(f'{3600 / $TEST3_TIME:.2f}')") 2>/dev/null || TOTAL_4="N/A"
+echo "   - Total Throughput: $TOTAL_4 inferences/sec"
+IMPROVEMENT_4=$(python3 -c "print(f'{($TOTAL_4 / $SINGLE_FPS - 1) * 100:.1f}')") 2>/dev/null || IMPROVEMENT_4="N/A"
+echo "   - Improvement: $IMPROVEMENT_4%"
+echo "   - Duration: ${TEST3_TIME}s"
 echo ""
-echo "⏱️  총 테스트 시간: $(python3 -c "print(f'{$TEST1_TIME + $TEST2_TIME + $TEST3_TIME:.2f}')")초"
-echo "💡 멀티 비디오 처리로 총 throughput 증가!"
+echo "Total test time: $(python3 -c "print(f'{$TEST1_TIME + $TEST2_TIME + $TEST3_TIME:.2f}')")s"
+echo "Multi-video processing increases total throughput!"
 echo "========================================="
-
