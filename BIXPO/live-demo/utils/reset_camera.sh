@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🔄 Resetting Camera Device..."
+echo "Resetting Camera Device..."
 echo "================================"
 
 # Stop any running app first
@@ -29,19 +29,19 @@ if command -v sudo &> /dev/null; then
     sleep 1
     sudo modprobe uvcvideo 2>/dev/null
     sleep 1
-    echo "✅ Camera modules reloaded"
+    echo "Camera modules reloaded"
 else
-    echo "⚠️  sudo not available, skipping module reload"
+    echo "sudo not available, skipping module reload"
 fi
 
 # Check if camera is available
 echo ""
 echo "Checking camera availability..."
 if [ -e /dev/video0 ]; then
-    echo "✅ /dev/video0 is available"
+    echo "/dev/video0 is available"
     ls -l /dev/video*
 else
-    echo "❌ /dev/video0 not found"
+    echo "/dev/video0 not found"
     echo "Available video devices:"
     ls -l /dev/video* 2>/dev/null || echo "No video devices found"
 fi

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NPU vs GPU Performance Comparison</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -16,14 +16,14 @@
                 <div class="panel-header-bar">
                     <div class="device-info">
                         <div class="device-brand">
-                            <img src="logo_rebellions.svg" alt="Rebellions" style="height: 30px; width: auto;">
+                            <img src="assets/images/logo_rebellions.svg" alt="Rebellions" style="height: 30px; width: auto;">
                         </div>
                         <div class="device-name">ATOM™-Max NPU</div>
                     </div>
                 </div>
                 <div class="video-wrapper">
                     <video class="video-player" id="videoPlayer1" autoplay loop muted>
-                        <source src="output_npu.mp4" type="video/mp4">
+                        <source src="assets/videos/output_npu.mp4" type="video/mp4">
                     </video>
                 </div>
             </div>
@@ -33,14 +33,14 @@
                 <div class="panel-header-bar">
                     <div class="device-info">
                         <div class="device-brand">
-                            <img src="logo_nvidia.svg" alt="NVIDIA" style="height: 24px; width: auto;">
+                            <img src="assets/images/logo_nvidia.svg" alt="NVIDIA" style="height: 24px; width: auto;">
                         </div>
                         <div class="device-name">L40S GPU</div>
                     </div>
                 </div>
                 <div class="video-wrapper">
                     <video class="video-player" id="videoPlayer2" autoplay loop muted>
-                        <source src="output_gpu.mp4" type="video/mp4">
+                        <source src="assets/videos/output_gpu.mp4" type="video/mp4">
                     </video>
                 </div>
             </div>
@@ -176,8 +176,8 @@ async function loadDataFiles() {
         npuData = embeddedData.npu_data;
         gpuData = embeddedData.gpu_data;
         
-        console.log('✓ NPU data loaded:', npuData.frame_data.length, 'frames');
-        console.log('✓ GPU data loaded:', gpuData.frame_data.length, 'frames');
+        console.log('NPU data loaded:', npuData.frame_data.length, 'frames');
+        console.log('GPU data loaded:', gpuData.frame_data.length, 'frames');
         
     
 }
@@ -348,7 +348,7 @@ function createFpsChart() {
             }
         }]
     });
-    console.log('✓ FPS chart created');
+    console.log('FPS chart created');
 }
 
 // Create performance chart
@@ -429,7 +429,7 @@ function createPerformanceChart() {
             }
         }
     });
-    console.log('✓ Performance chart created');
+    console.log('Performance chart created');
 }
 
 // Create energy gauges
@@ -460,7 +460,7 @@ function createEnergyChart() {
                 }
             }
         });
-        console.log('✓ ATOM power gauge created');
+        console.log('ATOM power gauge created');
     }
     
     // NVIDIA GPU Power Gauge
@@ -487,7 +487,7 @@ function createEnergyChart() {
                 }
             }
         });
-        console.log('✓ NVIDIA power gauge created');
+        console.log('NVIDIA power gauge created');
     }
 }
 
@@ -593,11 +593,11 @@ function stopAnimationLoop() {
     if (animationState.intervalId) {
         clearInterval(animationState.intervalId);
         animationState.isRunning = false;
-        console.log('⏸ Animation stopped');
+        console.log('Animation stopped');
     }
 }
 
-console.log('🚀 Script loaded');
+console.log('Script loaded');
 
     </script>
 </body>

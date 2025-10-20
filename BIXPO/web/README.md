@@ -2,7 +2,7 @@
 
 A real-time web dashboard comparing ATOM™-Max NPU and NVIDIA L40S GPU performance metrics for AI video processing workloads.
 
-![Dashboard Preview](image.png)
+![Dashboard Preview](/BIXPO/web/assets/images/image.png)
 
 ![Status](https://img.shields.io/badge/Status-Live-green)
 
@@ -40,7 +40,7 @@ A real-time web dashboard comparing ATOM™-Max NPU and NVIDIA L40S GPU performa
 
 ### Prerequisites
 - Modern web browser (Chrome, Firefox, Safari, Edge)
-- Video files: `output_npu.mp4` and `output_gpu.mp4`
+- Video files: `assets/videos/output_npu.mp4` and `assets/videos/output_gpu.mp4`
 - Data files: JSON files with power and FPS metrics
 
 ### Two Ways to Use:
@@ -101,18 +101,18 @@ npx http-server -p 8080
 ### Required Files
 
 ```
-frontend/
-├── index.html              # Original (needs server)
-├── index_standalone.html   # Standalone (no server)
-├── script.js
-├── style.css
-├── build_standalone.py     # Build script
-├── output_npu.mp4
-├── output_gpu.mp4
-├── npu_power.json
-├── npu_fps.json
-├── gpu_power.json
-└── gpu_fps.json
+web/
+├── index.html                      # Original (needs server)
+├── index_standalone.html           # Standalone (no server)
+├── build_standalone.py             # Build script
+├── assets/
+│   ├── css/style.css
+│   ├── js/script.js
+│   ├── images/ (logos)
+│   └── videos/ (output_npu.mp4, output_gpu.mp4)
+└── data/
+    ├── npu_data.json
+    └── gpu_data.json
 ```
 
 ## How to Use
@@ -158,11 +158,11 @@ Convert your videos to web-compatible format:
 ```bash
 # For NPU video
 ffmpeg -i your_npu_video.mp4 -c:v libx264 -preset fast -crf 23 \
-  -movflags +faststart output_npu.mp4
+  -movflags +faststart assets/videos/output_npu.mp4
 
 # For GPU video
 ffmpeg -i your_gpu_video.mp4 -c:v libx264 -preset fast -crf 23 \
-  -movflags +faststart output_gpu.mp4
+  -movflags +faststart assets/videos/output_gpu.mp4
 ```
 
 ### Step 2: Create Power Data JSON
@@ -359,7 +359,7 @@ For best results:
 
 ### Changing Colors
 
-Edit `style.css`:
+Edit `assets/css/style.css`:
 ```css
 /* NPU color (green) */
 .legend-item.atom .legend-dot { background: #76ff03; }
@@ -370,7 +370,7 @@ Edit `style.css`:
 
 ### Adjusting Animation Speed
 
-Edit `script.js`:
+Edit `assets/js/script.js`:
 ```javascript
 // Line 350: Change update interval calculation
 let updateInterval = 500; // milliseconds
@@ -378,7 +378,7 @@ let updateInterval = 500; // milliseconds
 
 ### Changing Data Window Size
 
-Edit `script.js`:
+Edit `assets/js/script.js`:
 ```javascript
 // Line 12: Number of data points visible
 maxDataPoints: 60  // Show last 60 samples
@@ -387,22 +387,29 @@ maxDataPoints: 60  // Show last 60 samples
 ## File Structure
 
 ```
-frontend/
-├── index.html          # Main HTML page
-├── script.js           # JavaScript logic & animations
-├── style.css           # Styling and layout
-├── README.md           # This file
-├── DATA_FORMAT.md      # Detailed data format specs
+web/
+├── index.html                  # Main HTML page
+├── index_standalone.html       # Standalone version (generated)
+├── build_standalone.py         # Script to build standalone version
+├── README.md                   # This file (English)
+├── README_ko.md                # Korean documentation
 │
-├── Videos (required):
-│   ├── output_npu.mp4  # NPU processing video
-│   └── output_gpu.mp4  # GPU processing video
+├── assets/
+│   ├── css/
+│   │   └── style.css          # Styling and layout
+│   ├── js/
+│   │   └── script.js          # JavaScript logic & animations
+│   ├── images/
+│   │   ├── logo_rebellions.svg # Rebellions logo
+│   │   ├── logo_nvidia.svg     # NVIDIA logo
+│   │   └── image.png           # Dashboard preview
+│   └── videos/
+│       ├── output_npu.mp4      # NPU processing video
+│       └── output_gpu.mp4      # GPU processing video
 │
-└── Data Files (required):
-    ├── npu_power.json  # NPU power samples
-    ├── npu_fps.json    # NPU FPS data
-    ├── gpu_power.json  # GPU power samples
-    └── gpu_fps.json    # GPU FPS data
+└── data/
+    ├── npu_data.json           # NPU performance data
+    └── gpu_data.json           # GPU performance data
 ```
 
 ## Browser Console Commands
@@ -483,5 +490,3 @@ python3 -m json.tool data.json
 # Open in browser
 open http://localhost:8080/index.html
 ```
-
-**Made for AI Performance Analysis**

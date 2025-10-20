@@ -1,13 +1,13 @@
 #!/bin/bash
 # Continuous bottleneck monitoring script
 
-echo "🔍 Bottleneck Monitor - Press Ctrl+C to stop"
+echo "Bottleneck Monitor - Press Ctrl+C to stop"
 echo "======================================"
 echo ""
 
 while true; do
     clear
-    echo "🔍 BOTTLENECK ANALYSIS - $(date '+%H:%M:%S')"
+    echo "BOTTLENECK ANALYSIS - $(date '+%H:%M:%S')"
     echo "======================================"
     echo ""
     
@@ -18,7 +18,7 @@ while true; do
         reverse | 
         .[] | 
         "\(.key): \(.value | floor)ms"
-    ' 2>/dev/null || echo "⚠️  Waiting for server..."
+    ' 2>/dev/null || echo "Waiting for server..."
     
     echo ""
     echo "======================================"
@@ -26,7 +26,7 @@ while true; do
     echo ""
     
     # Get FPS and NPU util
-    echo "📊 Current Stats:"
+    echo "Current Stats:"
     curl -s http://localhost:5000/stats | jq '{fps: .fps, npu_util: .npu_utilization, detections: .detections}' 2>/dev/null
     
     sleep 2

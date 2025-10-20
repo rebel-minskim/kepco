@@ -39,7 +39,7 @@
 - USB camera module (uvcvideo) in bad state
 
 **Fix**:
-- Created `reset_camera.sh` script to:
+- Created `utils/reset_camera.sh` script to:
   - Kill all processes using camera devices
   - Unload and reload camera kernel modules (uvcvideo)
   - Verify camera device availability
@@ -57,15 +57,15 @@ def cleanup_camera():
     global camera
     with camera_lock:
         if camera is not None:
-            print("🎥 Releasing camera...")
+            print("Releasing camera...")
             try:
                 camera.release()
             except Exception as e:
-                print(f"⚠️  Error releasing camera: {e}")
+                print(f"Error releasing camera: {e}")
             camera = None
             # Wait a bit for camera to fully release
             time.sleep(0.5)
-            print("✅ Camera released!")
+            print("Camera released!")
     
     # Force release using cv2
     cv2.destroyAllWindows()
@@ -84,7 +84,7 @@ def get_camera():
     global camera
     with camera_lock:
         if camera is None or not camera.isOpened():
-            print("🎥 Initializing camera...")
+            print("Initializing camera...")
             
             # Release any existing camera first
             if camera is not None:
@@ -98,7 +98,7 @@ def get_camera():
             camera = cv2.VideoCapture(CONFIG['camera_index'])
             
             if not camera.isOpened():
-                print("❌ Failed to open camera!")
+                print("Failed to open camera!")
                 return None
             
             camera.set(cv2.CAP_PROP_FRAME_WIDTH, CONFIG['camera_width'])
@@ -107,12 +107,12 @@ def get_camera():
             camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
             # Clear any buffered frames by reading a few
-            print("🔄 Clearing camera buffer...")
+            print("Clearing camera buffer...")
             for _ in range(5):
                 camera.read()
                 time.sleep(0.1)
             
-            print("✅ Camera initialized!")
+            print("Camera initialized!")
         return camera
 ```
 
@@ -128,7 +128,7 @@ def get_camera():
 def shutdown():
     """Graceful shutdown endpoint"""
     global stop_streaming
-    print("📴 Shutdown requested via API...")
+    print("Shutdown requested via API...")
     stop_streaming = True
     
     # Cleanup camera
@@ -149,14 +149,14 @@ def shutdown():
 def signal_handler(sig, frame):
     """Handle termination signals"""
     global stop_streaming
-    print(f"\n⚠️  Received signal {sig}, shutting down...")
+    print(f"\nReceived signal {sig}, shutting down...")
     stop_streaming = True
     
     # Give time for active streams to finish
     time.sleep(1)
     
     cleanup_camera()
-    print("✅ Cleanup complete!")
+    print("Cleanup complete!")
     import sys
     sys.exit(0)
 ```
@@ -172,7 +172,7 @@ def generate_frames():
     cap = get_camera()
     
     if cap is None:
-        print("❌ Failed to initialize camera for streaming")
+        print("Failed to initialize camera for streaming")
         return
     
     # ... rest of function ...
@@ -190,18 +190,18 @@ def generate_frames():
 echo "Attempting graceful shutdown via API..."
 SHUTDOWN_RESPONSE=$(curl -s -X POST http://localhost:5000/shutdown 2>/dev/null)
 if [ $? -eq 0 ]; then
-    echo "✅ Shutdown API called successfully"
+    echo "Shutdown API called successfully"
     sleep 2
     
     # Check if process stopped
     PIDS=$(ps aux | grep "[p]ython.*app_web.py" | awk '{print $2}')
     if [ -z "$PIDS" ]; then
-        echo "✅ Flask app stopped gracefully"
+        echo "Flask app stopped gracefully"
         # ... port cleanup ...
         exit 0
     fi
 else
-    echo "⚠️  Shutdown API not available, proceeding with signal-based shutdown..."
+    echo "Shutdown API not available, proceeding with signal-based shutdown..."
 fi
 ```
 
@@ -212,7 +212,7 @@ fi
 
 ## New Scripts
 
-### 1. reset_camera.sh
+### 1. utils/reset_camera.sh
 Emergency camera reset script that:
 - Stops the Flask app
 - Kills any processes using camera devices
@@ -221,10 +221,10 @@ Emergency camera reset script that:
 
 **Usage**:
 ```bash
-./reset_camera.sh
+./utils/reset_camera.sh
 ```
 
-### 2. test_camera_cleanup.py
+### 2. utils/test_camera_cleanup.py
 Test script to verify camera cleanup works properly:
 - Opens camera
 - Reads frames for 5 seconds
@@ -233,7 +233,7 @@ Test script to verify camera cleanup works properly:
 
 **Usage**:
 ```bash
-./test_camera_cleanup.py
+python3 utils/test_camera_cleanup.py
 ```
 
 ## Usage Instructions
@@ -252,7 +252,7 @@ Test script to verify camera cleanup works properly:
 
 3. **If camera gets stuck**:
    ```bash
-   ./reset_camera.sh
+   ./utils/reset_camera.sh
    ```
 
 ### Verification
@@ -274,23 +274,23 @@ cheese
 
 Run the test script to verify cleanup:
 ```bash
-./test_camera_cleanup.py
+python3 utils/test_camera_cleanup.py
 ```
 
 Expected output:
 ```
-🎥 Opening camera...
-🔄 Clearing camera buffer...
-✅ Camera opened successfully!
-📹 Reading frames for 5 seconds...
+Opening camera...
+Clearing camera buffer...
+Camera opened successfully!
+Reading frames for 5 seconds...
    Press Ctrl+C to test cleanup
 
-✅ Read 50 frames successfully
-🎥 Releasing camera...
-✅ Camera released!
+Read 50 frames successfully
+Releasing camera...
+Camera released!
 
-🔍 Checking if camera device is free...
-✅ Camera device is free! (can be reopened)
+Checking if camera device is free...
+Camera device is free! (can be reopened)
 ```
 
 ## Why Cheese Works But Your App Didn't
@@ -336,12 +336,12 @@ Camera hardware needs time to:
 ## Troubleshooting
 
 ### Green light stays on after stop
-1. Run `./reset_camera.sh`
+1. Run `./utils/reset_camera.sh`
 2. If that doesn't work: `sudo rmmod uvcvideo && sudo modprobe uvcvideo`
 3. Check for zombie processes: `ps aux | grep python`
 
 ### /dev/video0 not found
-1. Run `./reset_camera.sh`
+1. Run `./utils/reset_camera.sh`
 2. Check USB connection: `lsusb`
 3. Check kernel logs: `dmesg | grep video`
 4. Replug camera
@@ -359,12 +359,12 @@ Camera hardware needs time to:
 ## Summary
 
 The fixes ensure proper camera resource management by:
-1. ✅ Clearing camera buffer on initialization (fixes blurred screen)
-2. ✅ Adding graceful shutdown API (ensures cleanup)
-3. ✅ Improving signal handlers (better background process handling)
-4. ✅ Adding delays for hardware release (ensures green light turns off)
-5. ✅ Adding emergency reset script (recovers from bad states)
-6. ✅ Adding comprehensive error handling (prevents crashes)
+1. Clearing camera buffer on initialization (fixes blurred screen)
+2. Adding graceful shutdown API (ensures cleanup)
+3. Improving signal handlers (better background process handling)
+4. Adding delays for hardware release (ensures green light turns off)
+5. Adding emergency reset script (recovers from bad states)
+6. Adding comprehensive error handling (prevents crashes)
 
 Your app should now handle cameras as reliably as `cheese`!
 

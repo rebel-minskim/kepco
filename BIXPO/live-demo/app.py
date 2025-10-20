@@ -14,7 +14,6 @@ import time
 # Page configuration
 st.set_page_config(
     page_title="YOLO11 Live Inference",
-    page_icon="🎥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -48,7 +47,7 @@ with col_logo:
     try:
         st.image("logo_rebellions.png", width=150)
     except:
-        st.write("🚀 Rebellions")
+        st.write("Rebellions")
 
 with col_title:
     st.title("YOLO11 Live Inference Application")
@@ -58,10 +57,10 @@ with col_title:
 st.markdown("<hr class='header-divider'>", unsafe_allow_html=True)
 
 # Sidebar for settings
-st.sidebar.header("⚙️ Settings")
+st.sidebar.header("Settings")
 
 # Model selection
-model_path = st.sidebar.text_input("Model Path", value="yolov11.pt")
+model_path = st.sidebar.text_input("Model Path", value="models/yolov11.pt")
 
 # Confidence threshold
 confidence = st.sidebar.slider("Confidence Threshold", 0.0, 1.0, 0.25, 0.05)
@@ -96,16 +95,16 @@ col1, col2 = st.columns(2)
 
 # Live Webcam Stream (continuous)
 if source_option == "Live Webcam Stream":
-    st.info("🎥 Click 'Start Webcam' to begin live detection")
+    st.info("Click 'Start Webcam' to begin live detection")
     
     # Webcam controls
     webcam_col1, webcam_col2 = st.columns(2)
     
     with webcam_col1:
-        start_webcam = st.button("▶️ Start Webcam", type="primary")
+        start_webcam = st.button("Start Webcam", type="primary")
     
     with webcam_col2:
-        stop_webcam = st.button("⏹️ Stop Webcam")
+        stop_webcam = st.button("Stop Webcam")
     
     # Camera index selection
     camera_index = st.sidebar.number_input("Camera Index", min_value=0, max_value=10, value=0, step=1)
@@ -126,11 +125,11 @@ if source_option == "Live Webcam Stream":
     if st.session_state.webcam_running:
         # Create placeholders
         with col1:
-            st.subheader("📹 Live Feed")
+            st.subheader("Live Feed")
             frame_placeholder_input = st.empty()
         
         with col2:
-            st.subheader("🎯 Detection Results")
+            st.subheader("Detection Results")
             frame_placeholder_output = st.empty()
             stats_placeholder = st.empty()
         
@@ -202,11 +201,11 @@ if source_option == "Live Webcam Stream":
 # Webcam Snapshot
 elif source_option == "Webcam Snapshot":
     with col1:
-        st.subheader("📸 Camera Input")
+        st.subheader("Camera Input")
     with col2:
-        st.subheader("🎯 Detection Results")
+        st.subheader("Detection Results")
     
-    st.info("📸 Enable your webcam using the camera input below")
+    st.info("Enable your webcam using the camera input below")
     
     camera_input = st.camera_input("Take a picture")
     
@@ -253,9 +252,9 @@ elif source_option == "Webcam Snapshot":
 # Video upload
 elif source_option == "Upload Video":
     with col1:
-        st.subheader("📹 Original Video")
+        st.subheader("Original Video")
     with col2:
-        st.subheader("🎯 Detection Results")
+        st.subheader("Detection Results")
     
     video_file = st.file_uploader("Upload a video file", type=["mp4", "avi", "mov", "mkv"])
     
@@ -269,7 +268,7 @@ elif source_option == "Upload Video":
             st.video(video_file)
         
         # Process video button
-        if st.button("🚀 Process Video"):
+        if st.button("Process Video"):
             with st.spinner("Processing video..."):
                 # Open video
                 cap = cv2.VideoCapture(tfile.name)
@@ -317,14 +316,14 @@ elif source_option == "Upload Video":
                     stats_placeholder.write(f"Frame {frame_count}/{total_frames} | Objects: {len(detections)}")
                 
                 cap.release()
-                st.success("✅ Video processing complete!")
+                st.success("Video processing complete!")
 
 # Image upload
 elif source_option == "Upload Image":
     with col1:
-        st.subheader("📷 Original Image")
+        st.subheader("Original Image")
     with col2:
-        st.subheader("🎯 Detection Results")
+        st.subheader("Detection Results")
     
     image_file = st.file_uploader("Upload an image file", type=["jpg", "jpeg", "png", "bmp"])
     

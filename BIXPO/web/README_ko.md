@@ -2,7 +2,7 @@
 
 AI 영상 처리 워크로드에 대한 ATOM™-Max NPU와 NVIDIA L40S GPU 성능 지표를 비교하는 실시간 웹 대시보드입니다.
 
-![대시보드 미리보기](image.png)
+![대시보드 미리보기](/BIXPO/web/assets/images/image.png)
 
 ![상태](https://img.shields.io/badge/Status-Live-green)
 
@@ -40,7 +40,7 @@ AI 영상 처리 워크로드에 대한 ATOM™-Max NPU와 NVIDIA L40S GPU 성�
 
 ### 사전 요구사항
 - 최신 웹 브라우저 (Chrome, Firefox, Safari, Edge)
-- 비디오 파일: `output_npu.mp4` 및 `output_gpu.mp4`
+- 비디오 파일: `assets/videos/output_npu.mp4` 및 `assets/videos/output_gpu.mp4`
 - 데이터 파일: 전력 및 FPS 지표가 포함된 JSON 파일
 
 ### 두 가지 사용 방법:
@@ -101,18 +101,18 @@ npx http-server -p 8080
 ### 필수 파일
 
 ```
-frontend/
-├── index.html              # 원본 (서버 필요)
-├── index_standalone.html   # 독립 실행형 (서버 불필요)
-├── script.js
-├── style.css
-├── build_standalone.py     # 빌드 스크립트
-├── output_npu.mp4
-├── output_gpu.mp4
-├── npu_power.json
-├── npu_fps.json
-├── gpu_power.json
-└── gpu_fps.json
+web/
+├── index.html                      # 원본 (서버 필요)
+├── index_standalone.html           # 독립 실행형 (서버 불필요)
+├── build_standalone.py             # 빌드 스크립트
+├── assets/
+│   ├── css/style.css
+│   ├── js/script.js
+│   ├── images/ (로고들)
+│   └── videos/ (output_npu.mp4, output_gpu.mp4)
+└── data/
+    ├── npu_data.json
+    └── gpu_data.json
 ```
 
 ## 사용 방법
@@ -158,11 +158,11 @@ python3 build_standalone.py
 ```bash
 # NPU 비디오
 ffmpeg -i your_npu_video.mp4 -c:v libx264 -preset fast -crf 23 \
-  -movflags +faststart output_npu.mp4
+  -movflags +faststart assets/videos/output_npu.mp4
 
 # GPU 비디오
 ffmpeg -i your_gpu_video.mp4 -c:v libx264 -preset fast -crf 23 \
-  -movflags +faststart output_gpu.mp4
+  -movflags +faststart assets/videos/output_gpu.mp4
 ```
 
 ### 2단계: 전력 데이터 JSON 생성
@@ -257,8 +257,8 @@ ffmpeg -i your_gpu_video.mp4 -c:v libx264 -preset fast -crf 23 \
 
 ### 프레임당 에너지
 ```
-에너지 = 평균 전력 / FPS
-예: 50W / 90 FPS = 0.556 줄/프레임
+에너지 = 평균 전력
+예: 50W
 ```
 
 ### 효율성 배수
@@ -359,7 +359,7 @@ nvidia-smi --query-gpu=timestamp,power.draw \
 
 ### 색상 변경
 
-`style.css` 편집:
+`assets/css/style.css` 편집:
 ```css
 /* NPU 색상 (녹색) */
 .legend-item.atom .legend-dot { background: #76ff03; }
@@ -370,7 +370,7 @@ nvidia-smi --query-gpu=timestamp,power.draw \
 
 ### 애니메이션 속도 조정
 
-`script.js` 편집:
+`assets/js/script.js` 편집:
 ```javascript
 // Line 350: 업데이트 간격 계산 변경
 let updateInterval = 500; // 밀리초
@@ -378,7 +378,7 @@ let updateInterval = 500; // 밀리초
 
 ### 데이터 윈도우 크기 변경
 
-`script.js` 편집:
+`assets/js/script.js` 편집:
 ```javascript
 // Line 12: 표시되는 데이터 포인트 수
 maxDataPoints: 60  // 마지막 60개 샘플 표시
@@ -387,22 +387,29 @@ maxDataPoints: 60  // 마지막 60개 샘플 표시
 ## 파일 구조
 
 ```
-frontend/
-├── index.html          # 메인 HTML 페이지
-├── script.js           # JavaScript 로직 및 애니메이션
-├── style.css           # 스타일 및 레이아웃
-├── README.md           # 이 파일
-├── DATA_FORMAT.md      # 상세 데이터 형식 사양
+web/
+├── index.html                  # 메인 HTML 페이지
+├── index_standalone.html       # 독립 실행형 버전 (생성됨)
+├── build_standalone.py         # 독립 실행형 빌드 스크립트
+├── README.md                   # 영문 문서
+├── README_ko.md                # 한글 문서 (이 파일)
 │
-├── Videos (필수):
-│   ├── output_npu.mp4  # NPU 처리 비디오
-│   └── output_gpu.mp4  # GPU 처리 비디오
+├── assets/
+│   ├── css/
+│   │   └── style.css          # 스타일 및 레이아웃
+│   ├── js/
+│   │   └── script.js          # JavaScript 로직 및 애니메이션
+│   ├── images/
+│   │   ├── logo_rebellions.svg # 리벨리온즈 로고
+│   │   ├── logo_nvidia.svg     # NVIDIA 로고
+│   │   └── image.png           # 대시보드 미리보기
+│   └── videos/
+│       ├── output_npu.mp4      # NPU 처리 비디오
+│       └── output_gpu.mp4      # GPU 처리 비디오
 │
-└── Data Files (필수):
-    ├── npu_power.json  # NPU 전력 샘플
-    ├── npu_fps.json    # NPU FPS 데이터
-    ├── gpu_power.json  # GPU 전력 샘플
-    └── gpu_fps.json    # GPU FPS 데이터
+└── data/
+    ├── npu_data.json           # NPU 성능 데이터
+    └── gpu_data.json           # GPU 성능 데이터
 ```
 
 ## 브라우저 콘솔 명령
@@ -484,5 +491,4 @@ python3 -m json.tool data.json
 open http://localhost:8080/index.html
 ```
 
-**AI 성능 분석을 위해 제작됨**
 

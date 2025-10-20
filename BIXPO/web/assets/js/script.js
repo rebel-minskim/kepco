@@ -33,17 +33,17 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function loadDataFiles() {
     try {
         // Load NPU data
-        const npuDataResponse = await fetch('npu_data.json');
+        const npuDataResponse = await fetch('data/npu_data.json');
         npuData = await npuDataResponse.json();
-        console.log('✓ NPU data loaded:', npuData.frame_data.length, 'frames');
+        console.log('NPU data loaded:', npuData.frame_data.length, 'frames');
         
         // Load GPU data
-        const gpuDataResponse = await fetch('gpu_data.json');
+        const gpuDataResponse = await fetch('data/gpu_data.json');
         gpuData = await gpuDataResponse.json();
-        console.log('✓ GPU data loaded:', gpuData.frame_data.length, 'frames');
+        console.log('GPU data loaded:', gpuData.frame_data.length, 'frames');
         
     } catch (error) {
-        console.error('❌ Error loading data files:', error);
+        console.error('Error loading data files:', error);
     }
 }
 
@@ -213,7 +213,7 @@ function createFpsChart() {
             }
         }]
     });
-    console.log('✓ FPS chart created');
+    console.log('FPS chart created');
 }
 
 // Create performance chart
@@ -294,7 +294,7 @@ function createPerformanceChart() {
             }
         }
     });
-    console.log('✓ Performance chart created');
+    console.log('Performance chart created');
 }
 
 // Create energy gauges
@@ -325,7 +325,7 @@ function createEnergyChart() {
                 }
             }
         });
-        console.log('✓ ATOM power gauge created');
+        console.log('ATOM power gauge created');
     }
     
     // NVIDIA GPU Power Gauge
@@ -352,7 +352,7 @@ function createEnergyChart() {
                 }
             }
         });
-        console.log('✓ NVIDIA power gauge created');
+        console.log('NVIDIA power gauge created');
     }
 }
 
@@ -458,8 +458,8 @@ function stopAnimationLoop() {
     if (animationState.intervalId) {
         clearInterval(animationState.intervalId);
         animationState.isRunning = false;
-        console.log('⏸ Animation stopped');
+        console.log('Animation stopped');
     }
 }
 
-console.log('🚀 Script loaded');
+console.log('Script loaded');

@@ -1,92 +1,163 @@
-# YOLO11 Fire & Safety Detection System
+# KEPCO AI Demo Suite
+
+AI-powered demonstration applications showcasing Rebellions NPU performance and capabilities for KEPCO Proof of Concept.
+
+![Project Status](https://img.shields.io/badge/Status-Active-green)
+![Platform](https://img.shields.io/badge/Platform-Rebellions%20NPU-blue)
+
+## Overview
+
+This repository contains two demonstration applications designed for the KEPCO (Korea Electric Power Corporation) Proof of Concept, showcasing Rebellions NPU technology in real-world scenarios:
+
+1. **Performance Comparison Dashboard** - Visual comparison of NPU vs GPU performance metrics
+2. **Fire & Safety Detection System** - Real-time YOLO-based detection for industrial safety monitoring
+
+## Project Structure
+
+```
+kepco/
+├── BIXPO/                          # BIXPO demonstration applications
+│   ├── web/                        # Performance comparison dashboard
+│   │   ├── index.html              # Interactive dashboard
+│   │   ├── index_standalone.html   # Offline version
+│   │   ├── script.js               # Dashboard logic
+│   │   ├── style.css               # Dashboard styling
+│   │   ├── build_standalone.py     # Standalone builder
+│   │   ├── npu_data.json           # NPU performance data
+│   │   ├── gpu_data.json           # GPU performance data
+│   │   ├── output_npu.mp4          # NPU processing video
+│   │   ├── output_gpu.mp4          # GPU processing video
+│   │   ├── image.png               # Dashboard preview
+│   │   ├── README.md               # Dashboard documentation (English)
+│   │   └── README_ko.md            # Dashboard documentation (Korean)
+│   │
+│   └── live-demo/                  # Fire & safety detection system
+│       ├── app.py                  # Streamlit app (GPU)
+│       ├── app_web.py              # Flask app (NPU)
+│       ├── data.yaml               # Detection classes
+│       ├── yolov11.pt              # PyTorch model
+│       ├── yolov11.rbln            # RBLN compiled model
+│       ├── requirements.txt        # GPU dependencies
+│       ├── requirements_web.txt    # NPU dependencies
+│       ├── templates/              # Web templates
+│       ├── static/                 # Static assets
+│       ├── start_app.sh            # Start script
+│       ├── stop_app.sh             # Stop script
+│       └── README.md               # Detection system documentation
+│
+└── README.md                       # This file
+```
+
+## Applications
+
+### 1. Performance Comparison Dashboard
+
+**Location**: `BIXPO/web/`
+
+A real-time web dashboard that visually compares ATOM™-Max NPU and NVIDIA L40S GPU performance metrics for AI video processing workloads.
+
+**Key Features**:
+- Side-by-side video comparison of NPU vs GPU processing
+- Real-time power consumption monitoring with animated gauges
+- Performance efficiency tracking (FPS per Watt)
+- Power usage visualization over time
+- Standalone offline mode available
+
+**Use Cases**:
+- Performance demonstrations
+- Technical presentations
+- Efficiency analysis
+- Stakeholder meetings
+
+**Quick Start**:
+```bash
+cd BIXPO/web
+
+# Option 1: Standalone (offline)
+python3 build_standalone.py
+open index_standalone.html
+
+# Option 2: Web server
+python3 -m http.server 8080
+open http://localhost:8080/index.html
+```
+
+**Documentation**: See `BIXPO/web/README.md` for detailed usage instructions.
+
+### 2. Fire & Safety Detection System
+
+**Location**: `BIXPO/live-demo/`
 
 Real-time object detection system for fire and safety monitoring using YOLOv11 on Rebellions NPU.
 
----
+**Detected Objects**:
+- Fire (flames)
+- Smoke (white, black, opacity)
+- People (person, head detection)
+- Safety equipment (helmets)
+- Safety hazards (ladders, falling persons)
 
-## 📋 Table of Contents
+**Two Applications Available**:
 
-- [Overview](#overview)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [Installation](#installation)
-- [Applications](#applications)
-  - [Streamlit App (app.py)](#streamlit-app-apppy)
-  - [Flask Web App (app_web.py)](#flask-web-app-app_webpy)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Performance](#performance)
-- [Troubleshooting](#troubleshooting)
+1. **Streamlit App** (`app.py`) - GPU Version
+   - Interactive UI with controls and settings
+   - Multiple input modes (webcam, video, images)
+   - Real-time statistics and charts
+   - Development and testing focused
 
----
+2. **Flask Web App** (`app_web.py`) - NPU Version
+   - High-performance MJPEG streaming
+   - NPU accelerated with AsyncRuntime
+   - Optimized for 4K displays
+   - Production-ready (20-25 FPS)
 
-## 🎯 Overview
+**Use Cases**:
+- Industrial fire safety monitoring
+- Safety equipment compliance checking
+- Hazard detection and alerts
+- 24/7 surveillance systems
 
-This system provides real-time detection of:
-- **Fire** - Flame detection
-- **Smoke** - White, black, and opacity smoke
-- **People** - Person and head detection
-- **Safety Equipment** - Helmet detection
-- **Safety Hazards** - Ladder and falling detection
+**Quick Start**:
+```bash
+cd BIXPO/live-demo
 
-**Two Applications Available:**
-1. **Streamlit App** (`app.py`) - Interactive UI with controls and settings
-2. **Flask Web App** (`app_web.py`) - High-performance real-time video streaming
+# GPU Version (Streamlit)
+source venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
 
----
+# NPU Version (Flask)
+source venv/bin/activate
+pip install -r requirements_web.txt
+python3 app_web.py
+```
 
-## ✨ Features
+**Documentation**: See `BIXPO/live-demo/docs/README.md` for detailed usage instructions.
 
-### Common Features (Both Apps)
-- ✅ Real-time object detection using YOLOv11
-- ✅ Rebellions NPU acceleration
-- ✅ Multiple input sources (webcam, video, images)
-- ✅ Custom class detection (9 classes from data.yaml)
-- ✅ Adjustable confidence and IoU thresholds
-- ✅ FPS monitoring
-
-### Streamlit App (`app.py`) - GPU Version
-- 🎛️ Rich interactive UI with sidebar controls
-- 📊 Real-time statistics and charts
-- 🎥 Multiple input modes (live webcam, snapshot, video upload, image upload)
-- 📸 Frame-by-frame control
-- 💾 Easy to customize and extend
-- 🖥️ **GPU accelerated** (CUDA)
-
-### Flask Web App (`app_web.py`) - NPU Version
-- ⚡ High-performance MJPEG streaming
-- 🚀 NPU accelerated with AsyncRuntime
-- 🎯 Optimized for 4K displays
-- 📹 16:9 aspect ratio support
-- 🌐 Auto-opens browser
-- 🔥 **2-3x faster** than Streamlit (20+ FPS vs 8-10 FPS)
-
----
-
-## 💻 System Requirements
+## System Requirements
 
 ### Hardware
-- **GPU Version**: NVIDIA GPU with CUDA support
-- **NPU Version**: Rebellions NPU (ATOM or similar)
-- **Camera**: USB webcam or built-in camera
+- **NPU**: Rebellions ATOM NPU (ATOM-Max recommended)
+- **GPU**: NVIDIA GPU with CUDA support (for GPU comparison)
+- **Camera**: USB webcam or built-in camera (for detection system)
 - **Display**: Any resolution (optimized for 4K: 3840x2160)
 
 ### Software
-- Python 3.8+
-- Ubuntu 20.04+ / Linux
-- CUDA Toolkit (for GPU version)
-- Rebellions SDK (for NPU version)
+- **OS**: Ubuntu 20.04+ / Linux
+- **Python**: 3.8 or higher
+- **CUDA**: Toolkit 11.0+ (for GPU applications)
+- **Rebellions SDK**: Latest version (for NPU applications)
+- **Browser**: Modern web browser (Chrome, Firefox, Safari, Edge)
 
----
-
-## 📦 Installation
+## Installation
 
 ### 1. Clone Repository
 ```bash
-cd /home/rebellions/rebellions/kepco
+git clone <repository-url>
+cd kepco
 ```
 
-### 2. Create Virtual Environment
+### 2. Set Up Virtual Environment
 ```bash
 python3 -m venv venv
 source venv/bin/activate
@@ -94,465 +165,251 @@ source venv/bin/activate
 
 ### 3. Install Dependencies
 
-**For GPU Version (Streamlit):**
+**For Performance Dashboard**:
 ```bash
+cd BIXPO/web
+# No dependencies needed for standalone version
+# For development, standard Python 3 is sufficient
+```
+
+**For Detection System (GPU)**:
+```bash
+cd BIXPO/live-demo
 pip install -r requirements.txt
 ```
 
-**For NPU Version (Flask):**
+**For Detection System (NPU)**:
 ```bash
+cd BIXPO/live-demo
 pip install -r requirements_web.txt
 ```
 
-### 4. Download Models
-- GPU: `yolov11.pt` (PyTorch model)
-- NPU: `yolov11.rbln` (Compiled RBLN model)
+## Quick Reference
 
-### 5. Configure Classes
-Edit `data.yaml` to define your detection classes:
-```yaml
-nc: 9
-names:
-  0: person
-  1: fire
-  2: Smoke_White
-  3: Opacity_Smoke
-  4: Smoke_Black
-  5: helmet
-  6: ladder
-  7: head
-  8: falling
+### Performance Dashboard
+```bash
+# Standalone (Offline)
+cd BIXPO/web
+python3 build_standalone.py
+open index_standalone.html
+
+# With Server (Development)
+cd BIXPO/web
+python3 -m http.server 8080
+# Open http://localhost:8080/index.html
 ```
 
----
-
-## 🚀 Applications
-
-### Streamlit App (`app.py`)
-
-**GPU-accelerated interactive application with rich UI**
-
-#### Features:
-- 🎛️ Interactive sidebar with all controls
-- 📊 Real-time FPS and detection statistics
-- 🎥 Multiple input modes:
-  - Live webcam stream
-  - Webcam snapshot
-  - Video file upload
-  - Image file upload
-- ⚙️ Adjustable settings:
-  - Confidence threshold (0.0 - 1.0)
-  - IoU threshold (0.0 - 1.0)
-  - Max FPS (1 - 30)
-  - Camera index selection
-- 📈 Visual feedback with annotated frames
-- 💾 Easy to customize and extend
-
-#### Usage:
+### Detection System
 ```bash
+# GPU Version (Development)
+cd BIXPO/live-demo
 streamlit run app.py
-```
+# Open http://localhost:8501
 
-#### Performance:
-- **FPS**: 15-30 FPS (depending on GPU)
-- **Resolution**: Auto (uses camera default)
-- **Processing**: GPU (CUDA)
-- **Best For**: Development, testing, demonstrations with UI
-
-#### Screenshot:
-```
-┌─────────────────────────────────────────────────────┐
-│ 📹 Live Feed          │  🎯 Detection Results      │
-│                       │                             │
-│   [Original Video]    │   [Annotated Video]        │
-│                       │                             │
-├─────────────────────────────────────────────────────┤
-│ Sidebar:              │ Stats:                      │
-│ ⚙️ Settings           │ Frame: 1234                 │
-│ 🎯 Confidence: 0.25   │ Objects: 3                  │
-│ 🔍 IoU: 0.45          │ - person: 2                 │
-│ 🎥 Max FPS: 15        │ - fire: 1                   │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-### Flask Web App (`app_web.py`)
-
-**NPU-accelerated high-performance web application**
-
-#### Features:
-- ⚡ MJPEG streaming for maximum FPS
-- 🚀 Rebellions NPU acceleration with AsyncRuntime
-- 🎯 Optimized for 4K displays
-- 📹 16:9 aspect ratio (software cropping from 4:3)
-- 🌐 Auto-opens browser
-- 🔥 Real-time detection with minimal latency
-- 📊 On-screen FPS and detection count
-
-#### Usage:
-
-**Option 1: Direct Run**
-```bash
+# NPU Version (Production)
+cd BIXPO/live-demo
 python3 app_web.py
-```
-Browser opens automatically to: http://localhost:5000
-
-**Option 2: Using Scripts**
-```bash
-# Start
-./start_app.sh
-
-# Stop
-./stop_app.sh
+# Opens automatically at http://localhost:5000
 ```
 
-#### Performance:
-- **FPS**: 20-25 FPS (NPU + camera limit)
-- **Resolution**: 854x480 (16:9) cropped from 640x480 camera
-- **Processing**: NPU (Rebellions RBLN)
-- **Latency**: ~40-50ms
-- **NPU Utilization**: 40-60%
-- **Best For**: Production, live monitoring, 4K displays
+## Performance Metrics
 
-#### Display Modes:
-```bash
-# Normal browser
-http://localhost:5000
+### NPU vs GPU Comparison (from Dashboard Data)
 
-# Fullscreen
-Press F11 in browser
-```
+| Metric | ATOM™-Max NPU | NVIDIA L40S GPU | NPU Advantage |
+|--------|---------------|-----------------|---------------|
+| **FPS** | 36 | 24 | 1.5x faster |
+| **Avg Power** | 50W | 325W | 6.5x lower |
+| **Efficiency** | 0.72 FPS/W | 0.074 FPS/W | 9.7x better |
+| **Performance/Watt** | Superior | Baseline | 6.3x multiplier |
 
-#### Configuration:
-Edit `CONFIG` in `app_web.py`:
-```python
-CONFIG = {
-    'model_path': 'yolov11.rbln',
-    'confidence': 0.25,        # Detection threshold
-    'iou_threshold': 0.45,     # NMS threshold
-    'camera_index': 0,         # Camera device
-    'camera_width': 854,       # 16:9 aspect ratio
-    'camera_height': 480,
-    'jpeg_quality': 90,        # Compression quality
-}
-```
+### Detection System Performance
 
----
+| Version | Accelerator | FPS | Latency | Best For |
+|---------|-------------|-----|---------|----------|
+| **Streamlit** | NVIDIA GPU | 15-30 | 50-100ms | Development |
+| **Flask** | Rebellions NPU | 20-25 | 10-20ms | Production |
 
-## 🎮 Quick Start
+## Use Cases
 
-### For Development/Testing (GPU):
-```bash
-# Activate environment
-source venv/bin/activate
+### KEPCO-Specific Applications
 
-# Run Streamlit app
-streamlit run app.py
+1. **Power Infrastructure Monitoring**
+   - Real-time fire detection in substations
+   - Safety equipment compliance monitoring
+   - Hazard detection (falling, unsafe conditions)
 
-# Open browser to: http://localhost:8501
-```
+2. **Energy Efficiency Analysis**
+   - NPU power consumption advantages
+   - Cost-benefit analysis for AI deployments
+   - Total Cost of Ownership (TCO) comparisons
 
-### For Production/Demos (NPU):
-```bash
-# Activate environment
-source venv/bin/activate
+3. **Edge AI Deployment**
+   - Low-power edge devices
+   - Distributed monitoring systems
+   - 24/7 operation with minimal power consumption
 
-# Run Flask app
-python3 app_web.py
+4. **Technical Demonstrations**
+   - Live performance comparisons
+   - Real-time AI capabilities
+   - Stakeholder presentations
 
-# Browser opens automatically to: http://localhost:5000
-# Press F11 for fullscreen
-```
+## Documentation
 
----
+Each application includes comprehensive documentation:
 
-## ⚙️ Configuration
+- **Performance Dashboard**: `BIXPO/web/README.md` (English) and `README_ko.md` (Korean)
+- **Detection System**: `BIXPO/live-demo/docs/README.md` (English)
+- **BIXPO Overview**: `BIXPO/README.md`
 
-### Detected Classes (data.yaml)
-
-```yaml
-nc: 9  # Number of classes
-
-names:
-  0: person         # Person detection
-  1: fire           # Fire/flame detection
-  2: Smoke_White    # White smoke
-  3: Opacity_Smoke  # Dense smoke
-  4: Smoke_Black    # Black smoke
-  5: helmet         # Safety helmet
-  6: ladder         # Ladder detection
-  7: head           # Head detection
-  8: falling        # Falling person
-```
-
-### Camera Settings
-
-**Streamlit (app.py):**
-- Uses camera default resolution
-- Adjustable FPS limit in sidebar
-- Camera index selectable in UI
-
-**Flask (app_web.py):**
-- 854x480 (16:9) for 4K displays
-- Auto-cropped from camera feed
-- ~26 FPS camera throughput
-- Edit `CONFIG` to change
-
-### Detection Thresholds
-
-| Parameter | Range | Default | Description |
-|-----------|-------|---------|-------------|
-| Confidence | 0.0 - 1.0 | 0.25 | Minimum detection confidence |
-| IoU Threshold | 0.0 - 1.0 | 0.45 | Non-Maximum Suppression threshold |
-
-**Lower confidence** = More detections (may include false positives)
-**Higher confidence** = Fewer, more accurate detections
-
----
-
-## 📊 Performance
-
-### Comparison Table
-
-| Metric | Streamlit (GPU) | Flask (NPU) |
-|--------|----------------|-------------|
-| **FPS** | 15-30 | 20-25 |
-| **Accelerator** | NVIDIA GPU | Rebellions NPU |
-| **Inference Time** | 10-20ms | 30-35ms |
-| **Display Latency** | 50-100ms | 10-20ms |
-| **UI Complexity** | High | Minimal |
-| **Best For** | Development | Production |
-| **Resolution** | Auto | 854x480 (16:9) |
-| **4K Display** | Good | Optimized |
-
-### NPU Performance Tips
-
-1. **Camera Resolution**: Use 640x480 for max FPS, crop to 16:9
-2. **AsyncRuntime**: Use `parallel=2` for better throughput
-3. **JPEG Quality**: 80-90 balance between quality and speed
-4. **Skip Frames**: Process every frame for smooth detection
-5. **Display**: Fullscreen (F11) for best experience
-
-### GPU Performance Tips
-
-1. **Batch Size**: Keep at 1 for real-time
-2. **FPS Limit**: Set to 15-20 for stability
-3. **Resolution**: Use camera default
-4. **Model**: YOLOv11n for fastest, YOLOv11l for accuracy
-
----
-
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-#### 1. Camera Not Found
+**Dashboard Not Loading**:
+- Ensure you're using a web server (not file://)
+- Check that video files exist
+- Verify JSON data files are valid
+
+**Camera Not Working (Detection System)**:
 ```bash
-# List available cameras
+# List cameras
 ls /dev/video*
 
 # Test camera
-python3 -c "import cv2; cap = cv2.VideoCapture(0); print('Camera:', cap.isOpened())"
+python3 -c "import cv2; cap = cv2.VideoCapture(0); print(cap.isOpened())"
 ```
 
-**Solution**: Change `camera_index` in config
+**Low FPS (Detection System)**:
+- Check NPU utilization: `rbln-stat`
+- Verify camera resolution (640x480 recommended)
+- Monitor system resources
 
-#### 2. Low FPS (Flask)
-- Check camera resolution (should be 640x480)
-- Monitor NPU: `watch -n 0.1 rbln-stat`
-- Check NPU utilization (should be 40-60%)
-
-#### 3. NPU Not Utilized
-- Verify model compiled for current SDK version
-- Check: `rbln-stat` shows NPU activity
-- Recompile model if needed
-
-#### 4. Port Already in Use
+**Port Already in Use**:
 ```bash
-# Find process using port 5000
-lsof -ti:5000
-
-# Kill process
-kill -9 $(lsof -ti:5000)
+# Find and kill process
+lsof -ti:5000 | xargs kill -9  # Flask
+lsof -ti:8501 | xargs kill -9  # Streamlit
+lsof -ti:8080 | xargs kill -9  # HTTP server
 ```
 
-#### 5. Model Not Found
+## Development
+
+### Adding New Features to Dashboard
+
+1. Update data JSON files (`npu_data.json`, `gpu_data.json`)
+2. Modify `script.js` for new visualizations
+3. Update `style.css` for styling
+4. Rebuild standalone: `python3 build_standalone.py`
+
+### Modifying Detection Classes
+
+1. Edit `BIXPO/live-demo/data.yaml`
+2. Update class definitions
+3. Retrain or reconfigure model
+4. Test with both applications
+
+### Custom Configurations
+
+**Dashboard**: Edit files directly (HTML/CSS/JS)
+**Detection System**: Modify `CONFIG` dictionary in application files
+
+## Monitoring & Logging
+
+### NPU Monitoring
 ```bash
-# Check models exist
-ls -lh yolov11.pt yolov11.rbln
-
-# GPU model
-ls yolov11.pt
-
-# NPU model
-ls yolov11.rbln
-```
-
-#### 6. Class Names Not Loading
-- Verify `data.yaml` exists
-- Check YAML syntax
-- Ensure class indices match model
-
----
-
-## 🎯 Use Cases
-
-### Fire Safety Monitoring (Recommended: Flask NPU)
-- Real-time fire and smoke detection
-- 4K display support
-- Low latency alerts
-- Production-ready
-
-### Safety Equipment Compliance (Both)
-- Helmet detection
-- Safety equipment monitoring
-- PPE compliance checking
-
-### Hazard Detection (Recommended: Flask NPU)
-- Falling person detection
-- Ladder safety monitoring
-- Real-time alerts
-
-### Development & Testing (Recommended: Streamlit GPU)
-- Model evaluation
-- Threshold tuning
-- UI customization
-
----
-
-## 📝 File Structure
-
-```
-kepco/
-├── app.py                      # Streamlit GPU application
-├── app_web.py                  # Flask NPU application  
-├── data.yaml                   # Class definitions
-├── requirements.txt            # GPU dependencies
-├── requirements_web.txt        # NPU dependencies
-├── yolov11.pt                  # PyTorch model (GPU)
-├── yolov11.rbln               # Compiled RBLN model (NPU)
-├── templates/
-│   └── index.html             # Flask template
-├── logs/
-│   └── app_web.log            # Application logs
-├── start_app.sh               # Start script
-├── stop_app.sh                # Stop script
-└── README.md                   # This file
-```
-
----
-
-## 🔗 Scripts
-
-### Start Flask App
-```bash
-./start_app.sh
-```
-
-### Stop Flask App
-```bash
-./stop_app.sh
-```
-
-### View Logs
-```bash
-tail -f logs/app_web.log
-```
-
-### Monitor NPU
-```bash
+# Real-time NPU stats
 watch -n 0.1 rbln-stat
+
+# Check NPU utilization
+rbln-stat | grep "Util"
 ```
 
----
-
-## 🌐 Remote Access
-
-### Access from Another Device
-
-**Find your IP:**
+### Application Logs
 ```bash
-ip addr show | grep "inet "
+# Detection system (Flask)
+tail -f BIXPO/live-demo/logs/app_web.log
+
+# Streamlit (console output)
+# Logs displayed in terminal
 ```
 
-**Access from browser:**
+### System Resources
+```bash
+# CPU and memory
+htop
+
+# GPU (if available)
+nvidia-smi
+
+# Disk usage
+df -h
 ```
-http://YOUR_IP:5000    # Flask NPU
-http://YOUR_IP:8501    # Streamlit GPU
-```
+
+## Best Practices
+
+### For Demonstrations
+
+1. **Prepare Ahead**:
+   - Test all applications before presentation
+   - Verify camera and display connections
+   - Check network connectivity
+
+2. **Performance Dashboard**:
+   - Use standalone version for offline demos
+   - Prepare backup data files
+   - Test on target display resolution
+
+3. **Detection System**:
+   - Use Flask (NPU) version for live demos
+   - Set appropriate confidence thresholds
+   - Use fullscreen mode (F11)
+
+4. **System Health**:
+   - Monitor NPU temperature and utilization
+   - Check available disk space
+   - Ensure stable power supply
+
+## Performance Optimization
+
+### Dashboard
+- Use standalone version for best performance
+- Compress video files for faster loading
+- Optimize JSON data (remove unnecessary samples)
+
+### Detection System
+- Use 640x480 camera resolution
+- Set JPEG quality to 80-90
+- Enable NPU AsyncRuntime with parallel=2
+- Process every frame for smooth detection
+
+## Support & Resources
+
+### Documentation
+- Rebellions NPU: https://docs.rbln.ai/
+- Ultralytics YOLO: https://docs.ultralytics.com/
+- Streamlit: https://docs.streamlit.io/
+- Flask: https://flask.palletsprojects.com/
+
+### Debugging Checklist
+- [ ] All dependencies installed
+- [ ] Models downloaded and accessible
+- [ ] Camera/video sources working
+- [ ] Ports not blocked by firewall
+- [ ] Sufficient disk space available
+- [ ] NPU drivers and SDK up to date
+
+## License
+
+Copyright © 2025 Rebellions Inc.
+
+## Contact
+
+For technical support or questions about this demonstration suite, please contact the Rebellions technical team.
 
 ---
 
-## 📚 Additional Resources
+**Built with Rebellions NPU Technology**
 
-- **Rebellions NPU Docs**: https://docs.rbln.ai/
-- **Ultralytics YOLO**: https://docs.ultralytics.com/
-- **Streamlit Docs**: https://docs.streamlit.io/
-- **Flask Docs**: https://flask.palletsprojects.com/
-
----
-
-## 🎓 Best Practices
-
-### For Production Deployment (Flask NPU)
-1. Use Flask app (`app_web.py`)
-2. Set camera to 854x480 (16:9)
-3. Use fullscreen mode (F11)
-4. Monitor NPU utilization
-5. Log all detections
-6. Set appropriate confidence threshold
-
-### For Development (Streamlit GPU)
-1. Use Streamlit app (`app.py`)
-2. Adjust thresholds in sidebar
-3. Test with different input sources
-4. Analyze detection statistics
-5. Fine-tune model if needed
-
----
-
-## 🚀 Quick Reference
-
-| Task | Streamlit (GPU) | Flask (NPU) |
-|------|----------------|-------------|
-| **Start** | `streamlit run app.py` | `python3 app_web.py` |
-| **Stop** | `Ctrl+C` | `./stop_app.sh` |
-| **URL** | http://localhost:8501 | http://localhost:5000 |
-| **Fullscreen** | Browser F11 | Browser F11 |
-| **Logs** | Terminal | `logs/app_web.log` |
-| **FPS** | 15-30 | 20-25 |
-
----
-
-## ✨ Summary
-
-**Choose Streamlit (app.py) if you need:**
-- Interactive UI with controls
-- Easy customization
-- Development and testing
-- Multiple input modes
-- GPU acceleration
-
-**Choose Flask (app_web.py) if you need:**
-- Maximum FPS (20-25)
-- Production deployment
-- 4K display optimization
-- Minimal latency
-- NPU acceleration
-- 24/7 monitoring
-
----
-
-## 📧 Support
-
-For issues or questions:
-1. Check logs: `tail -f logs/app_web.log`
-2. Monitor NPU: `rbln-stat`
-3. Test camera: `ls /dev/video*`
-4. Verify models exist: `ls *.pt *.rbln`
-
----
-
-**🎉 Enjoy your fire & safety detection system!**
+**For KEPCO Proof of Concept - 2025**
 

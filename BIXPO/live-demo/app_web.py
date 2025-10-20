@@ -26,7 +26,7 @@ stop_streaming = False
 
 # Configuration
 CONFIG = {
-    'model_path': 'yolov11.rbln',
+    'model_path': 'models/yolov11.rbln',
     'confidence': 0.25,
     'iou_threshold': 0.45,
     'camera_index': 0,
@@ -38,7 +38,7 @@ CONFIG = {
 }
 
 # Load class names
-def load_class_names(yaml_path="data.yaml"):
+def load_class_names(yaml_path="config/data.yaml"):
     try:
         with open(yaml_path, 'r') as f:
             data = yaml.safe_load(f)
@@ -58,7 +58,7 @@ CLASS_NAMES = load_class_names()
 # Load model with Runtime for better performance (AsyncRuntime has overhead)
 print("Loading RBLN model with Runtime...")
 runtime = rebel.Runtime(CONFIG['model_path'])
-print("✅ Runtime loaded!")
+print("Runtime loaded!")
 
 # Preprocessing (highly optimized for speed)
 def preprocess_image(image, input_size=None):
@@ -192,15 +192,15 @@ def cleanup_camera():
     global camera
     with camera_lock:
         if camera is not None:
-            print("🎥 Releasing camera...")
+            print("Releasing camera...")
             try:
                 camera.release()
             except Exception as e:
-                print(f"⚠️  Error releasing camera: {e}")
+                print(f"Error releasing camera: {e}")
             camera = None
             # Wait a bit for camera to fully release
             time.sleep(0.5)
-            print("✅ Camera released!")
+            print("Camera released!")
     
     # Force release using cv2
     cv2.destroyAllWindows()
@@ -211,7 +211,7 @@ def get_camera():
     global camera
     with camera_lock:
         if camera is None or not camera.isOpened():
-            print("🎥 Initializing camera...")
+            print("Initializing camera...")
             
             # Release any existing camera first
             if camera is not None:
@@ -226,7 +226,7 @@ def get_camera():
             camera = cv2.VideoCapture(CONFIG['camera_index'])
             
             if not camera.isOpened():
-                print("❌ Failed to open camera!")
+                print("Failed to open camera!")
                 return None
             
             # Set camera properties for fast capture
@@ -237,7 +237,7 @@ def get_camera():
             
             # Use MJPEG format for faster capture
             camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-            print("📷 Using MJPEG format for camera capture")
+            print("Using MJPEG format for camera capture")
             
             # Enable auto-focus (if supported)
             camera.set(cv2.CAP_PROP_AUTOFOCUS, 1)
@@ -248,11 +248,11 @@ def get_camera():
             # Adjust sharpness if supported
             camera.set(cv2.CAP_PROP_SHARPNESS, 128)  # Mid-range value
             
-            print("📷 Camera settings configured")
+            print("Camera settings configured")
             
             # Clear camera buffer and allow stabilization time
             # This is crucial to avoid blurry first frames!
-            print("🔄 Clearing camera buffer and stabilizing...")
+            print("Clearing camera buffer and stabilizing...")
             for i in range(10):
                 ret, frame = camera.read()
                 if ret and i >= 5:
@@ -262,20 +262,20 @@ def get_camera():
                     print(f"   Frame {i+1}/10 - Sharpness: {sharpness:.1f}")
                 time.sleep(0.15)  # 150ms between reads for auto-focus/exposure
             
-            print("✅ Camera initialized and stabilized!")
+            print("Camera initialized and stabilized!")
         return camera
 
 def signal_handler(sig, frame):
     """Handle termination signals"""
     global stop_streaming
-    print(f"\n⚠️  Received signal {sig}, shutting down...")
+    print(f"\nReceived signal {sig}, shutting down...")
     stop_streaming = True
     
     # Give time for active streams to finish
     time.sleep(1)
     
     cleanup_camera()
-    print("✅ Cleanup complete!")
+    print("Cleanup complete!")
     import sys
     sys.exit(0)
 
@@ -289,7 +289,7 @@ def generate_frames():
     cap = get_camera()
     
     if cap is None:
-        print("❌ Failed to initialize camera for streaming")
+        print("Failed to initialize camera for streaming")
         return
     
     frame_count = 0
@@ -311,7 +311,7 @@ def generate_frames():
             stats['camera_time'] = camera_time
             
             if not ret:
-                print("⚠️  Failed to read frame from camera")
+                print("Failed to read frame from camera")
                 break
             
             # No cropping needed - 1280x720 is already 16:9
@@ -396,13 +396,13 @@ def generate_frames():
             stats['total_loop_time'] = total_loop
     
     except GeneratorExit:
-        print("📹 Browser closed, stream ended")
+        print("Browser closed, stream ended")
     except Exception as e:
-        print(f"❌ Error in video stream: {e}")
+        print(f"Error in video stream: {e}")
     finally:
         # Release camera when stream ends to turn off the green light
         cleanup_camera()
-        print("📹 Video stream generator exited")
+        print("Video stream generator exited")
 
 @app.before_request
 def check_shutdown():
@@ -492,7 +492,7 @@ def config():
 def shutdown():
     """Graceful shutdown endpoint"""
     global stop_streaming
-    print("📴 Shutdown requested via API...")
+    print("Shutdown requested via API...")
     stop_streaming = True
     
     # Cleanup camera
@@ -514,17 +514,17 @@ def open_browser():
 
 if __name__ == '__main__':
     print("\n" + "="*70)
-    print("🚀 YOLO11 NPU Web Interface - Bottleneck Profiling Enabled")
+    print("YOLO11 NPU Web Interface - Bottleneck Profiling Enabled")
     print("="*70)
-    print(f"\n✅ Model loaded: {CONFIG['model_path']}")
-    print(f"✅ Classes: {len(CLASS_NAMES)}")
-    print(f"✅ Camera: {CONFIG['camera_index']}")
-    print(f"✅ Resolution: {CONFIG['camera_width']}x{CONFIG['camera_height']} (qHD)")
-    print(f"✅ Format: MJPEG (Default backend)")
-    print(f"✅ Model input: {CONFIG['model_input_size']}x{CONFIG['model_input_size']}")
-    print(f"✅ Skip frames: {CONFIG['skip_frames']} (process every 2nd frame)")
-    print(f"\n🌐 Opening browser automatically to: http://localhost:5000")
-    print("\n🔍 BOTTLENECK PROFILING ACTIVE:")
+    print(f"\nModel loaded: {CONFIG['model_path']}")
+    print(f"Classes: {len(CLASS_NAMES)}")
+    print(f"Camera: {CONFIG['camera_index']}")
+    print(f"Resolution: {CONFIG['camera_width']}x{CONFIG['camera_height']} (qHD)")
+    print(f"Format: MJPEG (Default backend)")
+    print(f"Model input: {CONFIG['model_input_size']}x{CONFIG['model_input_size']}")
+    print(f"Skip frames: {CONFIG['skip_frames']} (process every 2nd frame)")
+    print(f"\nOpening browser automatically to: http://localhost:5000")
+    print("\nBOTTLENECK PROFILING ACTIVE:")
     print("   Every operation is timed to find the slowest component!")
     print("   - Camera capture time")
     print("   - Preprocessing time")
@@ -533,10 +533,10 @@ if __name__ == '__main__':
     print("   - Drawing/text overlay time")
     print("   - JPEG encoding time")
     print("   - Network streaming time")
-    print("\n📊 Analysis Endpoints:")
+    print("\nAnalysis Endpoints:")
     print("   - http://localhost:5000/stats - All timing stats")
     print("   - http://localhost:5000/bottleneck - Detailed bottleneck analysis")
-    print("\n💡 After running for a few seconds, check:")
+    print("\nAfter running for a few seconds, check:")
     print("   curl http://localhost:5000/bottleneck | jq")
     print("="*70 + "\n")
     
