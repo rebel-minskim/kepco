@@ -239,12 +239,30 @@ def get_camera():
             camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
             print("📷 Using MJPEG format for camera capture")
             
-            # Warm up camera with a few quick reads (no sleep!)
-            print("🔄 Warming up camera...")
-            for _ in range(3):
-                camera.read()
+            # Enable auto-focus (if supported)
+            camera.set(cv2.CAP_PROP_AUTOFOCUS, 1)
             
-            print("✅ Camera initialized!")
+            # Set auto-exposure to aperture priority mode (if supported)
+            camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)
+            
+            # Adjust sharpness if supported
+            camera.set(cv2.CAP_PROP_SHARPNESS, 128)  # Mid-range value
+            
+            print("📷 Camera settings configured")
+            
+            # Clear camera buffer and allow stabilization time
+            # This is crucial to avoid blurry first frames!
+            print("🔄 Clearing camera buffer and stabilizing...")
+            for i in range(10):
+                ret, frame = camera.read()
+                if ret and i >= 5:
+                    # Check if frame is getting clearer (measure sharpness)
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    sharpness = cv2.Laplacian(gray, cv2.CV_64F).var()
+                    print(f"   Frame {i+1}/10 - Sharpness: {sharpness:.1f}")
+                time.sleep(0.15)  # 150ms between reads for auto-focus/exposure
+            
+            print("✅ Camera initialized and stabilized!")
         return camera
 
 def signal_handler(sig, frame):
@@ -352,10 +370,10 @@ def generate_frames():
             stats['frame_count'] = frame_count
             
             # Draw performance stats on frame
-            cv2.putText(annotated_frame, f"FPS: {current_fps:.1f}", (10, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-            cv2.putText(annotated_frame, f"Detections: {len(last_detections)}", (10, 70), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            # cv2.putText(annotated_frame, f"FPS: {current_fps:.1f}", (10, 30), 
+            #             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            # cv2.putText(annotated_frame, f"Detections: {len(last_detections)}", (10, 70), 
+            #             cv2.FONT_HERSHEY_SIMPLEX,s 1, (0, 255, 0), 2)
             drawing_time = (time.time() - drawing_start) * 1000
             stats['drawing_time'] = drawing_time
             

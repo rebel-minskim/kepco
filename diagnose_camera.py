@@ -1,183 +1,136 @@
 #!/usr/bin/env python3
 """
-Camera Performance Diagnostic Tool
-Tests different camera configurations to find the fastest setup
+Camera Diagnostic Tool - Find and fix blur issues
 """
 
 import cv2
-import time
 import numpy as np
+import time
+import sys
 
-def test_camera_config(width, height, backend=None, fourcc=None, backend_name="Default"):
-    """Test a specific camera configuration"""
-    print(f"\n{'='*60}")
-    print(f"Testing: {width}x{height} @ {backend_name}")
-    if fourcc:
-        print(f"Format: {fourcc}")
-    print('='*60)
+def measure_sharpness(frame):
+    """Measure image sharpness using Laplacian variance"""
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(gray, cv2.CV_64F).var()
+
+def diagnose_camera():
+    print("🔍 Camera Diagnostic Tool")
+    print("=" * 60)
     
-    try:
-        # Open camera
-        if backend is not None:
-            cap = cv2.VideoCapture(0, backend)
+    # Open camera
+    print("\n📷 Opening camera...")
+    camera = cv2.VideoCapture(0)
+    
+    if not camera.isOpened():
+        print("❌ Failed to open camera!")
+        return 1
+    
+    # Try different settings
+    print("\n🔧 Testing different camera settings...\n")
+    
+    # Get default settings
+    width = camera.get(cv2.CAP_PROP_FRAME_WIDTH)
+    height = camera.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    fps = camera.get(cv2.CAP_PROP_FPS)
+    autofocus = camera.get(cv2.CAP_PROP_AUTOFOCUS)
+    focus = camera.get(cv2.CAP_PROP_FOCUS)
+    exposure = camera.get(cv2.CAP_PROP_EXPOSURE)
+    
+    print(f"Default Settings:")
+    print(f"  Resolution: {int(width)}x{int(height)}")
+    print(f"  FPS: {int(fps)}")
+    print(f"  Autofocus: {autofocus}")
+    print(f"  Focus: {focus}")
+    print(f"  Exposure: {exposure}")
+    
+    # Set to 960x540
+    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 960)
+    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 540)
+    camera.set(cv2.CAP_PROP_FPS, 30)
+    camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    
+    # Enable autofocus
+    camera.set(cv2.CAP_PROP_AUTOFOCUS, 1)
+    
+    print(f"\n📊 Testing frame quality over time...")
+    print(f"{'Frame':<8} {'Time(s)':<10} {'Sharpness':<12} {'Status'}")
+    print("-" * 60)
+    
+    start_time = time.time()
+    sharpness_values = []
+    
+    for i in range(20):
+        ret, frame = camera.read()
+        if not ret:
+            print(f"❌ Failed to read frame {i+1}")
+            continue
+        
+        elapsed = time.time() - start_time
+        sharpness = measure_sharpness(frame)
+        sharpness_values.append(sharpness)
+        
+        # Determine status
+        if sharpness < 50:
+            status = "🔴 Very Blurry"
+        elif sharpness < 100:
+            status = "🟡 Blurry"
+        elif sharpness < 200:
+            status = "🟢 Acceptable"
         else:
-            cap = cv2.VideoCapture(0)
+            status = "✅ Sharp"
         
-        if not cap.isOpened():
-            print("❌ Failed to open camera")
-            return None
+        print(f"{i+1:<8} {elapsed:<10.2f} {sharpness:<12.1f} {status}")
         
-        # Set properties
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        cap.set(cv2.CAP_PROP_FPS, 30)
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        # Save first and last frame for comparison
+        if i == 0:
+            cv2.imwrite('/tmp/camera_frame_first.jpg', frame)
+        elif i == 19:
+            cv2.imwrite('/tmp/camera_frame_last.jpg', frame)
         
-        if fourcc:
-            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
-        
-        # Verify actual resolution
-        actual_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        actual_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        print(f"✅ Camera opened: {int(actual_width)}x{int(actual_height)}")
-        
-        # Warm up
-        for _ in range(5):
-            cap.read()
-        
-        # Time 30 frame captures
-        times = []
-        print("📊 Capturing 30 frames...")
-        for i in range(30):
-            start = time.time()
-            ret, frame = cap.read()
-            elapsed = (time.time() - start) * 1000
-            times.append(elapsed)
-            
-            if not ret:
-                print(f"❌ Failed to read frame {i}")
-                break
-        
-        cap.release()
-        
-        if len(times) > 0:
-            avg_time = np.mean(times)
-            min_time = np.min(times)
-            max_time = np.max(times)
-            std_time = np.std(times)
-            
-            print(f"\n📈 Results:")
-            print(f"   Average: {avg_time:.1f}ms per frame")
-            print(f"   Min: {min_time:.1f}ms")
-            print(f"   Max: {max_time:.1f}ms")
-            print(f"   Std Dev: {std_time:.1f}ms")
-            print(f"   Theoretical FPS: {1000/avg_time:.1f}")
-            
-            return {
-                'config': f"{width}x{height} @ {backend_name}",
-                'avg_time': avg_time,
-                'fps': 1000/avg_time,
-                'fourcc': fourcc
-            }
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return None
-
-def main():
-    print("\n" + "="*60)
-    print("🎥 CAMERA PERFORMANCE DIAGNOSTIC")
-    print("="*60)
-    print("\nThis will test different camera configurations to find")
-    print("the fastest setup for your hardware.\n")
+        time.sleep(0.2)
     
-    results = []
+    camera.release()
     
-    # Test different resolutions
-    resolutions = [
-        (640, 480, "VGA"),
-        (800, 600, "SVGA"),
-        (960, 540, "qHD"),
-        (1280, 720, "HD 720p"),
-    ]
+    print("\n" + "=" * 60)
+    print("📈 Analysis:")
+    print(f"  First frame sharpness: {sharpness_values[0]:.1f}")
+    print(f"  Last frame sharpness: {sharpness_values[-1]:.1f}")
+    print(f"  Average sharpness: {np.mean(sharpness_values):.1f}")
+    print(f"  Improvement: {sharpness_values[-1] - sharpness_values[0]:.1f}")
     
-    # Test different backends
-    backends = [
-        (None, "Default"),
-        (cv2.CAP_V4L2, "V4L2"),
-    ]
+    # Calculate when it stabilizes
+    avg_last_5 = np.mean(sharpness_values[-5:])
+    for i, val in enumerate(sharpness_values):
+        if val >= avg_last_5 * 0.9:  # Within 90% of stable value
+            print(f"  Stabilized at frame: {i+1} ({i*0.2:.1f}s)")
+            break
     
-    # Test different formats
-    formats = [None, 'MJPG', 'YUYV']
-    
-    print("\n🔍 Testing different configurations...")
-    print("This will take about 1-2 minutes...\n")
-    
-    for width, height, res_name in resolutions:
-        for backend, backend_name in backends:
-            for fmt in formats:
-                if fmt:
-                    config_name = f"{backend_name} + {fmt}"
-                else:
-                    config_name = backend_name
-                
-                result = test_camera_config(width, height, backend, fmt, config_name)
-                if result:
-                    results.append(result)
-                
-                time.sleep(0.5)  # Let camera settle
-    
-    # Print summary
-    print("\n" + "="*60)
-    print("📊 SUMMARY - FASTEST CONFIGURATIONS")
-    print("="*60)
-    
-    if results:
-        # Sort by FPS (descending)
-        results.sort(key=lambda x: x['fps'], reverse=True)
-        
-        print(f"\n{'Rank':<6} {'Configuration':<30} {'Avg Time':<12} {'FPS':<8}")
-        print("-" * 60)
-        
-        for i, r in enumerate(results[:10], 1):  # Top 10
-            print(f"{i:<6} {r['config']:<30} {r['avg_time']:>8.1f}ms   {r['fps']:>6.1f}")
-        
-        # Recommendations
-        best = results[0]
-        print("\n" + "="*60)
-        print("💡 RECOMMENDATION")
-        print("="*60)
-        print(f"\n✅ Use: {best['config']}")
-        print(f"   Expected FPS: {best['fps']:.1f}")
-        print(f"   Camera read time: {best['avg_time']:.1f}ms")
-        
-        # Extract resolution
-        config = best['config']
-        if '640x480' in config:
-            print(f"\n📝 Update app_web.py CONFIG:")
-            print(f"   'camera_width': 640,")
-            print(f"   'camera_height': 480,")
-        elif '800x600' in config:
-            print(f"\n📝 Update app_web.py CONFIG:")
-            print(f"   'camera_width': 800,")
-            print(f"   'camera_height': 600,")
-        elif '1280x720' in config:
-            print(f"\n📝 Update app_web.py CONFIG:")
-            print(f"   'camera_width': 1280,")
-            print(f"   'camera_height': 720,")
-        
-        if 'V4L2' in config:
-            print("   Use V4L2 backend: cv2.VideoCapture(0, cv2.CAP_V4L2)")
-        
-        if best['fourcc']:
-            print(f"   Use FOURCC: {best['fourcc']}")
-    
+    print(f"\n💡 Recommendation:")
+    if sharpness_values[-1] < 100:
+        print("  ⚠️  Camera appears to be out of focus!")
+        print("  Try:")
+        print("    1. Clean the camera lens")
+        print("    2. Check if there's a physical focus ring to adjust")
+        print("    3. Increase lighting in the room")
+        print("    4. Try manual focus if auto-focus isn't working")
+    elif sharpness_values[0] < 100 and sharpness_values[-1] > 150:
+        stable_frame = next((i for i, v in enumerate(sharpness_values) if v >= avg_last_5 * 0.9), 10)
+        stable_time = stable_frame * 0.2
+        print(f"  ✅ Camera needs ~{stable_time:.1f}s to stabilize")
+        print(f"  Increase buffer clearing to {stable_frame+2} frames with 0.2s delays")
     else:
-        print("\n❌ No successful camera configurations found!")
-        print("Check if camera is connected and accessible.")
+        print("  ✅ Camera appears to be working well!")
     
-    print("\n" + "="*60)
+    print(f"\n📁 Sample frames saved:")
+    print(f"  First frame: /tmp/camera_frame_first.jpg")
+    print(f"  Last frame:  /tmp/camera_frame_last.jpg")
+    print(f"\nCompare these images to see the difference!")
+    
+    return 0
 
 if __name__ == '__main__':
-    main()
-
+    try:
+        sys.exit(diagnose_camera())
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Interrupted by user")
+        sys.exit(1)
