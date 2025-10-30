@@ -5,12 +5,12 @@
 }
 
 :root {
-    /* 1920x1080 최적화 - 스크롤 없이 모든 콘텐츠 표시 */
-    --banner-height: 12vh;
-    --content-gap: 2vh;
-    --video-section-height: 48vh;
-    --chart-section-height: 35vh;
-    --section-gap: 2vh;
+    /* 16:9 최적화 - 4K UHD (3840x2160) 기본 설정 */
+    --banner-height: 10vh;
+    --content-gap: 1.2vh;
+    --video-section-height: 45vh;
+    --chart-section-height: 38vh;
+    --section-gap: 1.2vh;
 }
 
 body {
@@ -19,29 +19,31 @@ body {
     color: #ffffff;
     height: 100vh;
     display: block;
-    padding: 0.6vh 1vw;
+    padding: 0.5vh 0.8vw;
     padding-top: calc(var(--banner-height) + var(--content-gap));
     padding-bottom: 0.5vh;
-    overflow: hidden; /* 스크롤 방지 */
+    overflow: hidden;
 }
 
 .comparison-container {
     position: relative;
-    max-width: 1920px;
+    max-width: 100%;
     margin: 0 auto;
     width: 100%;
     height: calc(100vh - var(--banner-height) - var(--content-gap) - 1vh);
     display: flex;
     flex-direction: column;
     gap: var(--section-gap);
+    min-height: 0;
 }
 
 /* Video Panels Section */
 .video-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.8vh;
-    height: var(--video-section-height);
+    gap: 1vh;
+    flex: 1 1 70%;
+    min-height: 0;
 }
 
 .video-panel {
@@ -61,8 +63,8 @@ body {
 }
 
 .panel-header-bar {
-    padding: 14px 24px;
-    min-height: 70px;
+    padding: 1.2vh 1.5vw;
+    min-height: 7vh;
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -75,31 +77,34 @@ body {
 }
 
 .device-brand {
-    height: 26px;
-    font-size: 13px;
+    height: 38px;
+    font-size: 16px;
     font-weight: 400;
-    opacity: 0.8;
+    opacity: 0.9;
     color: #ffffff;
+    display: flex;
+    align-items: center;
 }
 
 .device-brand img {
-    height: 22px;
+    max-height: 48px;
     width: auto;
+    object-fit: contain;
 }
 
 .rebellions-logo {
-    height: 32px;
+    height: 48px;
     filter: none;
 }
 
 .nvidia-logo {
-    height: 22px; 
+    height: 36px;
 }
 
 .device-name {
-    font-size: 28px;
+    font-size: clamp(26px, 2.6vh, 48px);
     font-weight: 700;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.8px;
 }
 
 .video-wrapper {
@@ -118,10 +123,10 @@ body {
 .video-label {
     position: absolute;
     top: 16px;
-    left: 16px;
     right: 16px;
+    left: unset;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     z-index: 10;
 }
@@ -129,9 +134,9 @@ body {
 .auto-mode-btn {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 11px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 14px;
     font-weight: 600;
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -140,64 +145,68 @@ body {
 .surveillance-path {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.9);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: clamp(20px, 1.8vh, 28px);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
 }
 
 /* Charts Section */
 .charts-section {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.8vh;
-    height: var(--chart-section-height);
+    grid-template-columns: 1.2fr 0.9fr 1.2fr; /* 좌/우 넓게, 중앙 좁게 */
+    gap: 1vh;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .chart-panel {
-    background: #1a1a1a;
-    border-radius: 10px;
-    padding: 0.8vh 0.8vw 1vh 0.8vw;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    background: #ffffff08;
+    border-radius: 2vh;
+    padding: 2.4vh 2vh;
+    box-shadow: 0 0 0.6vh #00000026 inset;
     overflow: hidden;
-    justify-content: space-between;
+    backdrop-filter: blur(4px);
+    min-height: 0;
+    height: 100%;
 }
 
 .chart-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0.4vh;
+    margin-bottom: 1vh;
     flex-shrink: 0;
-    min-height: fit-content;
 }
 
 .chart-header h3 {
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
     margin: 0;
+    font-size: clamp(22px, 2.4vh, 36px);
+    color: #e5e7eb;
+    font-weight: 600;
+    letter-spacing: 0.03em;
 }
 
 .legend {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.7);
+    gap: 8px;
+    font-size: clamp(22px, 2vh, 32px);
+    font-weight: 600;
 }
 
 .legend-dot {
-    width: 10px;
-    height: 10px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     display: inline-block;
 }
@@ -215,82 +224,105 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: stretch;
     position: relative;
     min-height: 0;
-    max-height: calc(100% - 40px);
-    overflow: hidden;
+    overflow: visible;
+    width: 100%;
 }
 
 .chart-container canvas {
-    max-height: calc(100% - 20px) !important;
+    max-height: 100% !important;
     height: auto !important;
-    flex-shrink: 1;
+    width: auto !important;
+    max-width: 100% !important;
+    align-self: center;
 }
 
 /* Gauge Charts */
 .gauge-wrapper {
     display: flex;
-    justify-content: space-around;
-    align-items: center;
-    padding: 1vh 0;
-    height: 100%;
-    gap: 2vw;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 8vh 0 2vh 0;
+    flex: 1;
+    gap: 5vw;
 }
 
 .gauge-wrapper + .chart-footer {
-    margin-top: 0.5vh;
+    margin-top: 0;
 }
 
-.chart-panel:has(.gauge-wrapper) .chart-container {
-    max-height: none;
+.chart-panel:has(.gauge-wrapper) {
+    justify-content: flex-start;
+}
+
+.chart-panel:has(.gauge-wrapper) .chart-header {
+    margin-bottom: 0;
+    flex-shrink: 0;
 }
 
 .gauge {
     position: relative;
-    width: 16vh;
-    height: 16vh;
+    width: 180px;
+    height: 180px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
 
+.gauge::before {
+    content: none;
+}
+
 .gauge canvas {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
     width: 100% !important;
     height: 100% !important;
-    aspect-ratio: 1 / 1;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    display: block !important;
 }
 
 .gauge-label {
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     text-align: center;
     pointer-events: none;
+    z-index: 10;
 }
 
 .gauge-name {
-    font-size: 12px;
+    font-size: clamp(22px, 1.8vw, 32px);
     font-weight: 600;
     color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 3px;
+    margin-bottom: 5px;
 }
 
 .gauge-value {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: clamp(50px, 4.5vw, 78px);
+    font-weight: 900;
     color: #ffffff;
     line-height: 1;
+    letter-spacing: -1.5px;
 }
 
 .gauge-value .unit {
-    font-size: 14px;
+    font-size: 24px;
     font-weight: 500;
-    margin-left: 2px;
+    margin-left: 3px;
 }
 
 .gauge-max {
-    font-size: 10px;
+    font-size: clamp(18px, 1.4vw, 26px);
     color: rgba(255, 255, 255, 0.5);
-    margin-top: 3px;
+    margin-top: 4px;
 }
 
 /* Performance/Energy Charts */
@@ -303,14 +335,16 @@ body {
 
 .metric-label {
     display: block;
-    font-size: 10px;
+    font-size: clamp(20px, 1.8vw, 32px);
+    font-weight: 600;
     color: rgba(255, 255, 255, 0.6);
-    margin-bottom: 3px;
+    margin-bottom: 4px;
 }
 
 .metric-value {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: clamp(32px, 3.6vw, 56px);
+    font-weight: 800;
+    letter-spacing: -1.5px;
     color: #76ff03;
 }
 
@@ -318,19 +352,29 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 0.5vh;
+    margin-top: auto;
     flex-shrink: 0;
-    min-height: 16px;
+    min-height: 28px;
+    padding-top: 0.8vh;
+    width: 100%;
 }
 
 .chart-label {
-    font-size: 10px;
+    font-size: clamp(18px, 1.6vw, 28px);
+    font-weight: 700;
+    letter-spacing: -0.3px;
     color: rgba(255, 255, 255, 0.6);
+    text-align: left;
+    flex: 0 0 auto;
 }
 
 .chart-action {
-    font-size: 10px;
+    font-size: clamp(18px, 1.6vw, 28px);
+    font-weight: 700;
+    letter-spacing: -0.3px;
     color: rgba(255, 255, 255, 0.5);
+    text-align: right;
+    flex: 0 0 auto;
 }
 
 /* Banner */
@@ -369,19 +413,19 @@ body {
 }
 
 .banner-left h1 {
-    font-size: 44px;
+    font-size: clamp(42px, 4.8vh, 72px);
     line-height: 1.1;
     font-weight: 900;
-    margin-bottom: 5px;
+    margin-bottom: 0.4vh;
     background: linear-gradient(180deg, #e7ffe0 0%, #b7f67a 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    letter-spacing: -1.4px;
+    letter-spacing: -2px;
 }
 
 .banner-left p {
-    font-size: 26px;
+    font-size: clamp(24px, 2.6vh, 40px);
     color: rgba(255,255,255,0.9);
     font-weight: 400;
 }
@@ -406,17 +450,17 @@ body {
 }
 
 .banner-logo {
-    max-height: 75px;
+    max-height: 100px;
     height: auto;
-    margin: 0 4px;
+    margin: 0 6px;
 }
 
-.banner-logo.rebellions { 
-    height: 65px; 
+.banner-logo.rebellions {
+    height: clamp(60px, 6.5vh, 100px);
 }
 
-.banner-logo.kepco { 
-    height: 42px; 
+.banner-logo.kepco {
+    height: clamp(46px, 5vh, 76px);
 }
 
 /* Responsive Design */
@@ -426,12 +470,12 @@ body {
     }
     
     .gauge {
-        width: 8vh;
-        height: 8vh;
+        width: 160px;
+        height: 160px;
     }
     
     .gauge-value {
-        font-size: 18px;
+        font-size: 42px;
     }
     
     .banner-left h1 {
@@ -544,12 +588,12 @@ body {
     }
     
     .gauge {
-        width: 110px;
-        height: 110px;
+        width: 120px;
+        height: 120px;
     }
     
     .gauge-value {
-        font-size: 18px;
+        font-size: 32px;
     }
     
     .chart-header h3 {
@@ -606,12 +650,12 @@ body {
     }
     
     .gauge {
-        width: 100px;
-        height: 100px;
+        width: 110px;
+        height: 110px;
     }
     
     .gauge-value {
-        font-size: 16px;
+        font-size: 28px;
     }
     
     .gauge-value .unit {
@@ -685,12 +729,12 @@ body {
     }
     
     .gauge {
-        width: 85px;
-        height: 85px;
+        width: 95px;
+        height: 95px;
     }
     
     .gauge-value {
-        font-size: 15px;
+        font-size: 24px;
     }
     
     .gauge-value .unit {
@@ -751,7 +795,7 @@ body {
         width: 100%;
     }
     
-    .banner-logo.rebellions, 
+    .banner-logo.rebellions,
     .banner-logo.kepco {
         height: 38px;
         max-width: 90px;
@@ -767,9 +811,232 @@ body {
 }
 
 @media (max-width: 500px) {
-    .banner-logo.rebellions, 
+    .banner-logo.rebellions,
     .banner-logo.kepco {
         height: 28px;
         max-width: 65px;
+    }
+}
+
+@media (min-width: 1800px) and (max-width: 2000px) and (min-height: 1000px) and (max-height: 1120px) {
+    /* 전반적 텍스트 축소 */
+    .banner-left h1 { font-size: clamp(24px, 2.8vh, 38px); }
+    .banner-left p { font-size: clamp(13px, 1.6vh, 20px); }
+  
+    .device-name { font-size: clamp(16px, 1.6vh, 22px); }
+    .chart-header h3 { font-size: clamp(12px, 1.2vw, 16px); }
+    .legend-item { font-size: clamp(12px, 1.1vw, 16px); }
+  
+    .metric-value { font-size: clamp(18px, 2vw, 28px); }
+    .metric-label { font-size: clamp(11px, 0.9vw, 14px); }
+  
+    .chart-label,
+    .chart-action { font-size: clamp(11px, 0.9vw, 14px); }
+  
+    .gauge-value { font-size: clamp(20px, 1.8vw, 28px); }
+    .gauge-name { font-size: clamp(10px, 0.8vw, 13px); }
+    .gauge-max  { font-size: clamp(9px, 0.75vw, 12px); }
+  
+    /* 완벽한 원형 게이지 */
+    .gauge {
+      position: relative;
+      width: clamp(120px, 16vmin, 160px);
+      aspect-ratio: 1 / 1;   /* 핵심 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .gauge::before {
+      content: none; /* 제거 */
+    }
+    /* base rules already ensure canvas fills the gauge */
+  }
+
+/* 4K UHD (3840x2160) 최적화 */
+@media (min-width: 3600px) and (min-height: 2000px) {
+    :root {
+        --banner-height: 10vh;
+        --content-gap: 1.5vh;
+        --video-section-height: 45vh;
+        --chart-section-height: 38vh;
+        --section-gap: 1.5vh;
+    }
+
+    body {
+        padding: 1vh 1.2vw;
+        padding-top: calc(var(--banner-height) + var(--content-gap));
+    }
+
+    .comparison-container {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    /* 배너 텍스트 크기 증가 */
+    .banner-left h1 {
+        font-size: 72px;
+        letter-spacing: -2px;
+    }
+
+    .banner-left p {
+        font-size: 38px;
+    }
+
+    .banner-logo.rebellions {
+        height: 95px;
+    }
+
+    .banner-logo.kepco {
+        height: 72px;
+    }
+
+    /* 디바이스 이름 크기 증가 */
+    .device-name {
+        font-size: 48px;
+        font-weight: 700;
+    }
+
+    .device-brand {
+        height: 58px;
+    }
+
+    .device-brand img {
+        max-height: 68px;
+    }
+
+    .rebellions-logo {
+        height: 68px;
+    }
+
+    .nvidia-logo {
+        height: 52px;
+    }
+
+    .panel-header-bar {
+        padding: 1.8vh 2vw;
+        min-height: 8vh;
+    }
+
+    .surveillance-path {
+        font-size: 32px;
+        padding: 12px 24px;
+    }
+
+    /* 차트 패널 크기 증가 */
+    .chart-panel {
+        border-radius: 2.2vh;
+        padding: 3vh 2.5vh;
+        box-shadow: 0 0 0.8vh #00000028 inset;
+    }
+
+    /* 차트 헤더 텍스트 크기 증가 */
+    .chart-header {
+        margin-bottom: 0.8vh;
+    }
+
+    .chart-header h3 {
+        font-size: 38px;
+        margin-bottom: 1.5vh;
+    }
+
+    /* 범례 텍스트 크기 증가 */
+    .legend {
+        gap: 10px;
+    }
+
+    .legend-item {
+        font-size: 32px;
+        gap: 10px;
+    }
+
+    .legend-dot {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* 게이지 크기 및 텍스트 증가 */
+    .gauge {
+        width: 300px;
+        height: 300px;
+        aspect-ratio: 1 / 1;
+    }
+
+    .gauge-value {
+        font-size: 70px;
+        letter-spacing: -2px;
+    }
+
+    .gauge-value .unit {
+        font-size: 26px;
+        margin-left: 4px;
+    }
+
+    .gauge-name {
+        font-size: 28px;
+        margin-bottom: 6px;
+    }
+
+    .gauge-max {
+        font-size: 22px;
+        margin-top: 6px;
+    }
+
+    .gauge-wrapper {
+        gap: 7vw;
+        padding: 10vh 0 2.5vh 0;
+        align-items: flex-end;
+    }
+
+    .chart-panel:has(.gauge-wrapper) .chart-header {
+        margin-bottom: 0;
+    }
+
+    /* 메트릭 표시 크기 증가 */
+    .metric-display {
+        top: 20px;
+        right: 20px;
+    }
+
+    .metric-value {
+        font-size: 62px;
+        letter-spacing: -2px;
+    }
+
+    .metric-label {
+        font-size: 28px;
+        margin-bottom: 6px;
+    }
+
+    /* 차트 푸터 텍스트 크기 증가 */
+    .chart-footer {
+        margin-top: 1.2vh;
+        min-height: 36px;
+    }
+
+    .chart-label,
+    .chart-action {
+        font-size: 28px;
+        font-weight: 600;
+    }
+
+    /* Chart.js 캔버스 크기 최적화 */
+    .chart-header {
+        margin-bottom: 1.5vh;
+    }
+
+    .chart-footer {
+        margin-top: auto;
+        padding-top: 1vh;
+    }
+
+    .surveillance-path {
+        font-size: clamp(26px, 2.2vh, 36px);
+        padding: 12px 24px;
+    }
+
+    .auto-mode-btn {
+        font-size: 16px;
+        padding: 10px 22px;
     }
 }

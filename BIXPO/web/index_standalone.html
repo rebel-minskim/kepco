@@ -85,7 +85,6 @@
                     <canvas id="fpsChart"></canvas>
                     <div class="chart-footer">
                         <span class="chart-label">Throughput (Imgs/s)</span>
-                        <span class="chart-action"></span>
                     </div>
                 </div>
             </div>
@@ -141,7 +140,7 @@
                     </div>
                     <canvas id="performanceChart"></canvas>
                     <div class="chart-footer">
-                        <span class="chart-label">↑ FPS/Watt</span>
+                        <span class="chart-label">FPS/Watt</span>
                         <span class="chart-action">Time →</span>
                     </div>
                 </div>
@@ -169,6 +168,12 @@ let animationState = {
     intervalId: null,
     maxDataPoints: 50
 };
+
+// Detect 4K resolution and set font scale
+const is4K = window.innerWidth >= 3600 && window.innerHeight >= 2000;
+const fontScale = is4K ? 2.5 : 1;
+
+console.log(`Resolution: ${window.innerWidth}x${window.innerHeight}, 4K mode: ${is4K}, Font scale: ${fontScale}`);
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
@@ -333,7 +338,7 @@ function createFpsChart() {
                     grid: { display: false },
                     ticks: {
                         color: '#ffffff',
-                        font: { size: 14, weight: 'bold' }
+                        font: { size: Math.round(14 * fontScale), weight: 'bold' }
                     }
                 },
                 y: {
@@ -346,7 +351,7 @@ function createFpsChart() {
                     },
                     ticks: {
                         color: '#888888',
-                        font: { size: 12 }
+                        font: { size: Math.round(12 * fontScale) }
                     }
                 }
             }
@@ -359,10 +364,10 @@ function createFpsChart() {
                     meta.data.forEach((bar, index) => {
                         const data = dataset.data[index];
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 16px Arial';
+                        ctx.font = `bold ${Math.round(16 * fontScale)}px Arial`;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
-                        ctx.fillText(data + ' Imgs/s', bar.x, bar.y - 5);
+                        ctx.fillText(data + ' Imgs/s', bar.x, bar.y - (5 * fontScale));
                     });
                 });
             }
@@ -473,6 +478,7 @@ function createEnergyChart() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                aspectRatio: 1,
                 cutout: '75%',
                 plugins: {
                     legend: { display: false },
@@ -500,6 +506,7 @@ function createEnergyChart() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                aspectRatio: 1,
                 cutout: '75%',
                 plugins: {
                     legend: { display: false },
