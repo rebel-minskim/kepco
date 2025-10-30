@@ -8,6 +8,20 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+    <section class="expo-banner" aria-label="협력 배너">
+        <div class="banner-content">
+            <div class="banner-left">
+                <h1>작업자 안전 관제 모니터링</h1>
+                <p>AI 비전으로 위험 행동을 즉시 감지하고, 사고를 미리 막습니다.</p>
+            </div>
+            <div class="banner-divider-v"></div>
+            <div class="banner-right vertical">
+                <img src="assets/images/logo_rebellions.svg" alt="리벨리온" class="banner-logo rebellions">
+                <img src="assets/images/logo_kepco.png" alt="한국전력공사" class="banner-logo kepco">
+            </div>
+        </div>
+    </section>
+    
     <div class="comparison-container">
         <!-- Top Section: Two Video Panels -->
         <div class="video-panels">
@@ -22,6 +36,9 @@
                     </div>
                 </div>
                 <div class="video-wrapper">
+                    <div class="video-label">
+                        <span class="surveillance-path">KEPCO 충북본부</span>
+                    </div>
                     <video class="video-player" id="videoPlayer1" autoplay loop muted>
                         <source src="assets/videos/output_npu.mp4" type="video/mp4">
                     </video>
@@ -39,6 +56,9 @@
                     </div>
                 </div>
                 <div class="video-wrapper">
+                    <div class="video-label">
+                        <span class="surveillance-path">KEPCO 충북본부</span>
+                    </div>
                     <video class="video-player" id="videoPlayer2" autoplay loop muted>
                         <source src="assets/videos/output_gpu.mp4" type="video/mp4">
                     </video>

@@ -4,37 +4,52 @@
     box-sizing: border-box;
 }
 
+:root {
+    /* 1920x1080 최적화 - 스크롤 없이 모든 콘텐츠 표시 */
+    --banner-height: 12vh;
+    --content-gap: 2vh;
+    --video-section-height: 48vh;
+    --chart-section-height: 35vh;
+    --section-gap: 2vh;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
     background: #0a0a0a;
     color: #ffffff;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    padding: 20px 20px;
+    height: 100vh;
+    display: block;
+    padding: 0.6vh 1vw;
+    padding-top: calc(var(--banner-height) + var(--content-gap));
+    padding-bottom: 0.5vh;
+    overflow: hidden; /* 스크롤 방지 */
 }
 
 .comparison-container {
+    position: relative;
     max-width: 1920px;
     margin: 0 auto;
     width: 100%;
+    height: calc(100vh - var(--banner-height) - var(--content-gap) - 1vh);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--section-gap);
 }
 
 /* Video Panels Section */
 .video-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 0.8vh;
+    height: var(--video-section-height);
 }
 
 .video-panel {
-    border-radius: 12px;
+    border-radius: 10px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .atom-panel {
@@ -46,42 +61,43 @@ body {
 }
 
 .panel-header-bar {
-    padding: 20px 30px;
-    min-height: 86px; /* keep headers equal so videos align even with larger logo */
+    padding: 14px 24px;
+    min-height: 70px;
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .device-info {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .device-brand {
-    height: 30px;
-    font-size: 14px;
+    height: 26px;
+    font-size: 13px;
     font-weight: 400;
     opacity: 0.8;
     color: #ffffff;
 }
 
 .device-brand img {
-    height: 24px;
+    height: 22px;
     width: auto;
 }
 
 .rebellions-logo {
-    height: 36px;
+    height: 32px;
     filter: none;
 }
 
 .nvidia-logo {
-    height: 24px; 
+    height: 22px; 
 }
 
 .device-name {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 700;
     letter-spacing: -0.5px;
 }
@@ -89,7 +105,8 @@ body {
 .video-wrapper {
     position: relative;
     background: #000;
-    aspect-ratio: 16/9;
+    flex: 1;
+    min-height: 0;
 }
 
 .video-player {
@@ -100,9 +117,9 @@ body {
 
 .video-label {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
+    top: 16px;
+    left: 16px;
+    right: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -112,9 +129,9 @@ body {
 .auto-mode-btn {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
-    padding: 8px 16px;
+    padding: 6px 14px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -123,9 +140,9 @@ body {
 .surveillance-path {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
-    padding: 8px 16px;
+    padding: 6px 14px;
     border-radius: 6px;
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(255, 255, 255, 0.9);
 }
 
@@ -133,28 +150,32 @@ body {
 .charts-section {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    gap: 0.8vh;
+    height: var(--chart-section-height);
 }
 
 .chart-panel {
     background: #1a1a1a;
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: 10px;
+    padding: 0.8vh 0.8vw 1vh 0.8vw;
     display: flex;
     flex-direction: column;
-    height: 400px;
+    height: 100%;
+    overflow: hidden;
+    justify-content: space-between;
 }
 
 .chart-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 20px;
+    margin-bottom: 0.4vh;
     flex-shrink: 0;
+    min-height: fit-content;
 }
 
 .chart-header h3 {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: #ffffff;
     margin: 0;
@@ -163,20 +184,20 @@ body {
 .legend {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 11px;
     color: rgba(255, 255, 255, 0.7);
 }
 
 .legend-dot {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     display: inline-block;
 }
@@ -190,19 +211,20 @@ body {
 }
 
 .chart-container {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
     position: relative;
     min-height: 0;
-    height: 100%;
+    max-height: calc(100% - 40px);
     overflow: hidden;
 }
 
 .chart-container canvas {
-    max-height: 250px !important;
-    height: 250px !important;
+    max-height: calc(100% - 20px) !important;
+    height: auto !important;
+    flex-shrink: 1;
 }
 
 /* Gauge Charts */
@@ -210,21 +232,33 @@ body {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding: 20px 0;
+    padding: 1vh 0;
+    height: 100%;
+    gap: 2vw;
+}
+
+.gauge-wrapper + .chart-footer {
+    margin-top: 0.5vh;
+}
+
+.chart-panel:has(.gauge-wrapper) .chart-container {
+    max-height: none;
 }
 
 .gauge {
     position: relative;
-    width: 180px;
-    height: 180px;
+    width: 16vh;
+    height: 16vh;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .gauge canvas {
     width: 100% !important;
     height: 100% !important;
+    aspect-ratio: 1 / 1;
 }
 
 .gauge-label {
@@ -234,48 +268,48 @@ body {
 }
 
 .gauge-name {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 .gauge-value {
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 700;
     color: #ffffff;
     line-height: 1;
 }
 
 .gauge-value .unit {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     margin-left: 2px;
 }
 
 .gauge-max {
-    font-size: 11px;
+    font-size: 10px;
     color: rgba(255, 255, 255, 0.5);
-    margin-top: 4px;
+    margin-top: 3px;
 }
 
 /* Performance/Energy Charts */
 .metric-display {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 14px;
+    right: 14px;
     text-align: right;
 }
 
 .metric-label {
     display: block;
-    font-size: 11px;
+    font-size: 10px;
     color: rgba(255, 255, 255, 0.6);
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 .metric-value {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     color: #76ff03;
 }
@@ -284,227 +318,256 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 12px;
+    margin-top: 0.5vh;
+    flex-shrink: 0;
+    min-height: 16px;
 }
 
 .chart-label {
-    font-size: 11px;
+    font-size: 10px;
     color: rgba(255, 255, 255, 0.6);
 }
 
 .chart-action {
-    font-size: 11px;
+    font-size: 10px;
     color: rgba(255, 255, 255, 0.5);
 }
 
-/* Responsive Design */
-
-/* Large Desktop (1600px+) */
-@media (min-width: 1600px) {
-    .comparison-container {
-        max-width: 2200px;
-    }
+/* Banner */
+.expo-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--banner-height);
+    z-index: 1000;
+    background: linear-gradient(90deg, #142510 40%, #2c2137 100%);
+    box-shadow: 0 3px 28px 0 rgba(0,0,0,0.40);
+    border-radius: 0;
+    border-bottom: 2px solid rgba(120,255,100,0.13);
 }
 
-/* Desktop (1200px - 1600px) */
+.banner-content {
+    padding-left: 2vw;
+    padding-right: 2vw;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    max-width: 100vw;
+    margin: 0 auto;
+    gap: 2vw;
+}
+
+.banner-left {
+    flex: 7;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-width: 0;
+}
+
+.banner-left h1 {
+    font-size: 44px;
+    line-height: 1.1;
+    font-weight: 900;
+    margin-bottom: 5px;
+    background: linear-gradient(180deg, #e7ffe0 0%, #b7f67a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -1.4px;
+}
+
+.banner-left p {
+    font-size: 26px;
+    color: rgba(255,255,255,0.9);
+    font-weight: 400;
+}
+
+.banner-divider-v {
+    width: 0;
+    min-width: 0;
+    border-right: 3px dotted rgba(120,255,100,0.35);
+    height: 70%;
+    margin: 0 30px;
+    opacity: 0.80;
+    display: block;
+}
+
+.banner-right {
+    flex: 3;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+.banner-logo {
+    max-height: 75px;
+    height: auto;
+    margin: 0 4px;
+}
+
+.banner-logo.rebellions { 
+    height: 65px; 
+}
+
+.banner-logo.kepco { 
+    height: 42px; 
+}
+
+/* Responsive Design */
 @media (max-width: 1600px) {
     .device-name {
-        font-size: 28px;
+        font-size: 26px;
     }
     
     .gauge {
-        width: 160px;
-        height: 160px;
+        width: 8vh;
+        height: 8vh;
     }
     
     .gauge-value {
-        font-size: 24px;
+        font-size: 18px;
+    }
+    
+    .banner-left h1 {
+        font-size: 42px;
+    }
+    
+    .banner-left p {
+        font-size: 26px;
     }
 }
 
-/* Medium Desktop (1024px - 1400px) */
 @media (max-width: 1400px) {
+    :root {
+        --banner-height: 10vh;
+        --video-section-height: 48vh;
+        --chart-section-height: 40vh;
+    }
+    
+    body {
+        overflow-y: auto;
+    }
+    
+    .comparison-container {
+        height: auto;
+    }
+    
+    .video-panels,
+    .charts-section {
+        height: auto;
+    }
+    
     .charts-section {
         grid-template-columns: 1fr;
     }
     
     .chart-panel {
-        height: 380px;
+        height: 320px;
     }
     
     .gauge-wrapper {
-        gap: 60px;
+        gap: 50px;
     }
 }
 
-/* Tablet Landscape (768px - 1024px) */
 @media (max-width: 1024px) {
     body {
-        padding: 15px 15px;
+        padding: 12px 12px;
     }
     
     .video-panels {
         grid-template-columns: 1fr;
     }
     
-    .charts-section {
-        grid-template-columns: 1fr;
-    }
-    
     .device-name {
-        font-size: 24px;
+        font-size: 22px;
     }
     
     .panel-header-bar {
-        padding: 16px 24px;
+        padding: 12px 20px;
+        min-height: 60px;
     }
     
     .chart-panel {
-        height: 360px;
+        height: 300px;
     }
     
-    .chart-header h3 {
-        font-size: 15px;
+    .banner-left h1 {
+        font-size: 32px;
     }
     
-    .metric-value {
-        font-size: 20px;
+    .banner-left p {
+        font-size: 22px;
+    }
+    
+    .banner-logo.rebellions { 
+        height: 50px; 
+    }
+    
+    .banner-logo.kepco { 
+        height: 36px; 
     }
 }
 
-/* Tablet Portrait (600px - 768px) */
 @media (max-width: 768px) {
     body {
         padding: 10px 10px;
     }
     
     .comparison-container {
-        gap: 12px;
+        gap: 10px;
     }
     
     .video-panels,
     .charts-section {
-        gap: 12px;
+        gap: 10px;
     }
     
     .chart-panel {
-        padding: 16px;
-        height: 340px;
-    }
-    
-    .device-name {
-        font-size: 22px;
-    }
-    
-    .panel-header-bar {
-        padding: 14px 20px;
-    }
-    
-    .gauge {
-        width: 140px;
-        height: 140px;
-    }
-    
-    .gauge-value {
-        font-size: 22px;
-    }
-    
-    .gauge-wrapper {
-        gap: 40px;
-    }
-    
-    .chart-header h3 {
-        font-size: 14px;
-    }
-    
-    .legend {
-        gap: 6px;
-    }
-    
-    .legend-item {
-        font-size: 11px;
-    }
-}
-
-/* Mobile (480px - 600px) */
-@media (max-width: 600px) {
-    body {
-        padding: 8px 8px;
-    }
-    
-    .comparison-container {
-        gap: 10px;
-    }
-    
-    .video-panels,
-    .charts-section {
-        gap: 10px;
+        padding: 12px;
+        height: 280px;
     }
     
     .device-name {
         font-size: 20px;
     }
     
-    .device-brand img {
-        height: 20px !important;
-    }
-    
     .panel-header-bar {
-        padding: 12px 16px;
+        padding: 10px 16px;
+        min-height: 54px;
     }
     
-    .chart-panel {
-        padding: 14px;
-        height: 320px;
+    .gauge {
+        width: 110px;
+        height: 110px;
     }
     
-    .chart-header {
-        margin-bottom: 16px;
+    .gauge-value {
+        font-size: 18px;
     }
     
     .chart-header h3 {
         font-size: 13px;
     }
     
-    .gauge {
-        width: 120px;
-        height: 120px;
+    .legend {
+        gap: 5px;
     }
     
-    .gauge-value {
-        font-size: 20px;
-    }
-    
-    .gauge-value .unit {
-        font-size: 14px;
-    }
-    
-    .gauge-name {
-        font-size: 12px;
-    }
-    
-    .gauge-max {
-        font-size: 10px;
-    }
-    
-    .metric-display {
-        top: 10px;
-        right: 10px;
-    }
-    
-    .metric-value {
-        font-size: 18px;
-    }
-    
-    .metric-label {
+    .legend-item {
         font-size: 10px;
     }
 }
 
-/* Small Mobile (< 480px) */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
     body {
-        padding: 5px 5px;
+        padding: 8px 8px;
     }
     
     .comparison-container {
@@ -526,36 +589,20 @@ body {
     
     .panel-header-bar {
         padding: 10px 14px;
+        min-height: 50px;
     }
     
     .chart-panel {
-        padding: 12px;
-        height: 300px;
+        padding: 10px;
+        height: 260px;
     }
     
     .chart-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
         margin-bottom: 12px;
     }
     
     .chart-header h3 {
         font-size: 12px;
-    }
-    
-    .legend {
-        flex-direction: row;
-        gap: 12px;
-    }
-    
-    .legend-item {
-        font-size: 10px;
-    }
-    
-    .legend-dot {
-        width: 10px;
-        height: 10px;
     }
     
     .gauge {
@@ -564,7 +611,7 @@ body {
     }
     
     .gauge-value {
-        font-size: 18px;
+        font-size: 16px;
     }
     
     .gauge-value .unit {
@@ -575,39 +622,154 @@ body {
         font-size: 11px;
     }
     
-    .gauge-max {
-        font-size: 9px;
-    }
-    
-    .gauge-wrapper {
-        gap: 20px;
-        padding: 10px 0;
-    }
-    
-    .metric-display {
-        top: 8px;
-        right: 8px;
-    }
-    
     .metric-value {
         font-size: 16px;
     }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 5px 5px;
+    }
     
-    .metric-label {
+    .comparison-container {
+        gap: 6px;
+    }
+    
+    .video-panels,
+    .charts-section {
+        gap: 6px;
+    }
+    
+    .device-name {
+        font-size: 16px;
+    }
+    
+    .device-brand img {
+        height: 16px !important;
+    }
+    
+    .panel-header-bar {
+        padding: 8px 12px;
+        min-height: 46px;
+    }
+    
+    .chart-panel {
+        padding: 10px;
+        height: 240px;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+    
+    .chart-header h3 {
+        font-size: 11px;
+    }
+    
+    .legend {
+        flex-direction: row;
+        gap: 10px;
+    }
+    
+    .legend-item {
         font-size: 9px;
     }
     
+    .legend-dot {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .gauge {
+        width: 85px;
+        height: 85px;
+    }
+    
+    .gauge-value {
+        font-size: 15px;
+    }
+    
+    .gauge-value .unit {
+        font-size: 11px;
+    }
+    
+    .gauge-name {
+        font-size: 10px;
+    }
+    
+    .gauge-max {
+        font-size: 8px;
+    }
+    
+    .gauge-wrapper {
+        gap: 16px;
+        padding: 8px 0;
+    }
+    
+    .metric-value {
+        font-size: 14px;
+    }
+    
+    .metric-label {
+        font-size: 8px;
+    }
+    
     .chart-footer {
-        margin-top: 8px;
+        margin-top: 6px;
     }
     
     .chart-label,
     .chart-action {
-        font-size: 10px;
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 800px) {
+    .banner-content {
+        flex-direction: column;
+        min-height: unset;
+        gap: 10px;
+        padding: 12px 5vw;
     }
     
-    .chart-container canvas {
-        max-height: 180px !important;
-        height: 180px !important;
+    body {
+        padding-top: calc(120px + 14px);
+    }
+    
+    .banner-divider-v {
+        display: none !important;
+    }
+    
+    .banner-left,
+    .banner-right {
+        align-items: center !important;
+        text-align: center;
+        width: 100%;
+    }
+    
+    .banner-logo.rebellions, 
+    .banner-logo.kepco {
+        height: 38px;
+        max-width: 90px;
+    }
+    
+    .banner-left h1 {
+        font-size: 20px;
+    }
+    
+    .banner-left p {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 500px) {
+    .banner-logo.rebellions, 
+    .banner-logo.kepco {
+        height: 28px;
+        max-width: 65px;
     }
 }
