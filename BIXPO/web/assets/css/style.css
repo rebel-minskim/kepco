@@ -47,6 +47,9 @@ body {
 
 .panel-header-bar {
     padding: 20px 30px;
+    min-height: 86px; /* keep headers equal so videos align even with larger logo */
+    display: flex;
+    align-items: center;
 }
 
 .device-info {
@@ -56,10 +59,25 @@ body {
 }
 
 .device-brand {
+    height: 30px;
     font-size: 14px;
     font-weight: 400;
     opacity: 0.8;
     color: #ffffff;
+}
+
+.device-brand img {
+    height: 24px;
+    width: auto;
+}
+
+.rebellions-logo {
+    height: 36px;
+    filter: none;
+}
+
+.nvidia-logo {
+    height: 24px; 
 }
 
 .device-name {
