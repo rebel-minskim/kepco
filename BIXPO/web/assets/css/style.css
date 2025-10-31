@@ -64,15 +64,15 @@ body {
 
 .panel-header-bar {
     padding: 1.2vh 1.5vw;
-    min-height: 7vh;
+    min-height: 2vh;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     flex-shrink: 0;
 }
 
 .device-info {
     display: flex;
-    flex-direction: column;
     gap: 6px;
 }
 
@@ -150,36 +150,164 @@ body {
     font-size: clamp(20px, 1.8vh, 28px);
     font-weight: 600;
     color: rgba(255, 255, 255, 0.95);
+    display: inline-flex;
+    align-items: center;
 }
+
+.surveillance-path i {
+    margin-right: 8px;
+}
+
+.surveillance-path .loc-icon {
+    width: 30px;
+    height: 30px;
+    margin-right: 12px;
+}
+
+/* Promo panel */
+.promo-panel {
+    background: #0f0f10;
+    border-radius: 2vh;
+    padding: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+    align-self: stretch;
+}
+
+.promo-image {
+    flex: 1 1 auto;
+    aspect-ratio: 16 / 9;
+    min-height: 180px;
+    filter: saturate(1.05);
+    position: relative;
+}
+
+.promo-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.promo-image::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 45%;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 100%);
+}
+
+.promo-caption {
+    position: absolute;
+    left: 36px;
+    bottom: calc(110px + 16px);
+    color: #ffffff;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.7);
+    font-size: clamp(22px, 3.2vh, 48px);
+    z-index: 2;
+}
+
+.promo-logos {
+    display: flex;
+    gap: 56px;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 24px;
+    background: #ffffff;
+    min-height: 110px;
+    z-index: 1;
+}
+
+.promo-logos img {
+    height: 84px; /* base size for both logos */
+    width: auto;
+    object-fit: contain;
+}
+
+.promo-logos img.kepco { height: 90px; }
+.promo-logos img.rebellions { height: 84px; }
 
 /* Charts Section */
 .charts-section {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* 좌/우 넓게, 중앙 좁게 */
+    grid-template-columns: 1fr 1fr 1fr 1fr; /* 3 charts + promo */
     gap: 1vh;
     flex: 1 1 auto;
     min-height: 0;
+    position: relative;
 }
+.global-legend {
+    position: absolute;
+    top: -8px;
+    left: 8px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 12px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 5;
+}
+
+/* Hide per-chart legends when global legend is present */
+.chart-header .legend { display: none; }
 
 .chart-panel {
     display: flex;
     flex-direction: column;
     background: #ffffff08;
     border-radius: 2vh;
-    padding: 2.4vh 2vh;
+    padding: 2.0vh 2vh;
     box-shadow: 0 0 0.6vh #00000026 inset;
     overflow: hidden;
     backdrop-filter: blur(4px);
     min-height: 0;
     height: 100%;
+    position: relative;
 }
 
 .chart-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1vh;
+    flex-direction: column; /* stack title and metric */
+    align-items: stretch;
+    gap: 4px;
+    margin-bottom: 0.4vh;
     flex-shrink: 0;
+}
+
+/* Reference-style chart headings */
+.chart-header .chart-title-wrap {
+    display: flex;
+    align-items: baseline; /* align text baselines for even bottoms */
+    gap: 16px;
+    margin-left: auto; /* push title group to the right */
+}
+
+.chart-subtitle {
+    color: rgba(255,255,255,0.75);
+    font-weight: 400;
+    font-size: clamp(18px, 2.1vh, 34px);
+    line-height: 1;
+}
+
+.chart-title-badge {
+    color: #fff;
+    border-radius: 8px;
+    display: inline-block;
+    font-weight: 900;
+    font-size: clamp(24px, 3.2vh, 42px);
+    letter-spacing: -0.5px;
+    line-height: 1;
+    vertical-align: baseline;
 }
 
 .chart-header h3 {
@@ -246,7 +374,7 @@ body {
     align-items: flex-end;
     /* padding: 8vh 0 2vh 0; */
     flex: 1;
-    gap: 5vw;
+    gap: 2vw;
 }
 
 .gauge-wrapper + .chart-footer {
@@ -326,25 +454,64 @@ body {
 }
 
 /* Performance/Energy Charts */
-.metric-display {
+.chart-container > .metric-display {
     position: absolute;
-    top: 14px;
-    right: 14px;
+    top: 2px;
+    right: 12px;
     text-align: right;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.chart-header .metric-display {
+    position: static;
+    align-self: flex-end; /* right align under the title */
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
 }
 
 .metric-label {
-    display: block;
-    font-size: clamp(20px, 1.8vw, 32px);
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
-    margin-bottom: 4px;
+    display: inline-block;
+    font-size: clamp(18px, 1.9vh, 30px);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    line-height: 1;
 }
 
 .metric-value {
-    font-size: clamp(32px, 3.6vw, 56px);
-    font-weight: 800;
-    letter-spacing: -1.5px;
+    font-size: clamp(58px, 6.8vh, 120px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    color: #76ff03;
+    text-shadow: 0 3px 0 rgba(0,0,0,0.35);
+}
+
+/* stacked fraction for energy metric */
+.metric-value .fraction {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 0.9;
+    margin-right: 8px;
+}
+.metric-value .fraction .num,
+.metric-value .fraction .den {
+    display: block;
+}
+.metric-value .fraction .bar {
+    display: block;
+    width: 0.9em;
+    height: 0.12em;
+    background: currentColor;
+    border-radius: 2px;
+    margin: 0.1em 0;
+}
+.metric-value .suffix { margin-left: 2px; }
+
+.metric-value.energy-fixed {
     color: #76ff03;
 }
 
@@ -416,51 +583,23 @@ body {
     font-size: clamp(48px, 5.5vh, 84px);
     line-height: 1.1;
     font-weight: 900;
-    margin-bottom: 0.4vh;
-    background: linear-gradient(180deg, #e7ffe0 0%, #b7f67a 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    margin-bottom: 1.2vh; /* add clearer spacing to subtitle */
     letter-spacing: -2px;
+}
+
+/* Emphasize e-View in banner */
+.eview-accent {
+    display: inline-block;
+    color: #ff4d4d;
+    font-style: italic;
+    font-weight: 800;
+    padding: 2px 8px;
 }
 
 .banner-left p {
     font-size: clamp(28px, 3vh, 46px);
     color: rgba(255,255,255,0.9);
     font-weight: 400;
-}
-
-.banner-divider-v {
-    width: 0;
-    min-width: 0;
-    border-right: 3px dotted rgba(120,255,100,0.35);
-    height: 70%;
-    margin: 0 30px;
-    opacity: 0.80;
-    display: block;
-}
-
-.banner-right {
-    flex: 3;
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-}
-
-.banner-logo {
-    max-height: 100px;
-    height: auto;
-    margin: 0 6px;
-}
-
-.banner-logo.rebellions {
-    height: clamp(60px, 6.5vh, 100px);
-}
-
-.banner-logo.kepco {
-    height: clamp(46px, 5vh, 76px);
 }
 
 /* Responsive Design */
@@ -548,14 +687,6 @@ body {
     
     .banner-left p {
         font-size: 22px;
-    }
-    
-    .banner-logo.rebellions { 
-        height: 50px; 
-    }
-    
-    .banner-logo.kepco { 
-        height: 36px; 
     }
 }
 
@@ -784,21 +915,10 @@ body {
         padding-top: calc(120px + 14px);
     }
     
-    .banner-divider-v {
-        display: none !important;
-    }
-    
-    .banner-left,
-    .banner-right {
+    .banner-left {
         align-items: center !important;
         text-align: center;
         width: 100%;
-    }
-    
-    .banner-logo.rebellions,
-    .banner-logo.kepco {
-        height: 38px;
-        max-width: 90px;
     }
     
     .banner-left h1 {
@@ -807,14 +927,6 @@ body {
     
     .banner-left p {
         font-size: 16px;
-    }
-}
-
-@media (max-width: 500px) {
-    .banner-logo.rebellions,
-    .banner-logo.kepco {
-        height: 28px;
-        max-width: 65px;
     }
 }
 
@@ -883,14 +995,6 @@ body {
         font-size: 46px;
     }
 
-    .banner-logo.rebellions {
-        height: 95px;
-    }
-
-    .banner-logo.kepco {
-        height: 72px;
-    }
-
     /* 디바이스 이름 크기 증가 */
     .device-name {
         font-size: 48px;
@@ -913,7 +1017,7 @@ body {
         height: 52px;
     }
 
-    .panel-header-bar {
+    /* .panel-header-bar {
         padding: 1.8vh 2vw;
         min-height: 8vh;
     }
@@ -935,8 +1039,7 @@ body {
     }
 
     .chart-header h3 {
-        font-size: 38px;
-        margin-bottom: 1.5vh;
+        font-size: 56px;
     }
 
     /* 범례 텍스트 크기 증가 */
@@ -991,8 +1094,7 @@ body {
 
     /* 메트릭 표시 크기 증가 */
     .metric-display {
-        top: 20px;
-        right: 20px;
+        padding-top: 20px;
     }
 
     .metric-value {
@@ -1001,7 +1103,7 @@ body {
     }
 
     .metric-label {
-        font-size: 28px;
+        font-size: 32px;
         margin-bottom: 6px;
     }
 

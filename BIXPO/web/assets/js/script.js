@@ -11,12 +11,21 @@ let animationState = {
     maxDataPoints: 50
 };
 
+// Peak stats across dataset
+let maxStats = {
+    energyInverse: null,       // max GPU/NPU power ratio
+    energyPercent: null,       // derived percent saving vs GPU
+    efficiencyAdvantage: null  // max (NPU fps/W) / (GPU fps/W)
+};
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Initializing...');
     
     // Load data files
     await loadDataFiles();
+    // Compute and apply dataset maxima to fixed KPIs
+    computeAndApplyMaxStats();
     
     // Create charts first
     createFpsChart();
@@ -28,6 +37,56 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('Initialization complete');
 });
+
+// Format power savings label as "1/2 이하" style or "% 절감"
+function formatPowerSavingsLabel(npuPower, gpuPower) {
+    if (!npuPower || !gpuPower) return '';
+    const ratio = npuPower / gpuPower; // NPU compared to GPU
+    const inverse = gpuPower / npuPower; // GPU compared to NPU
+
+    // Prefer common fractions when GPU power is an integer multiple of NPU
+    const fractionSteps = [8, 6, 5, 4, 3, 2]; // check higher multiples first
+    for (const k of fractionSteps) {
+        if (inverse >= k - 0.15) { // allow small tolerance
+            return `1/${k} 이하`;
+        }
+    }
+
+    // Otherwise show percentage saving
+    const saving = Math.max(0, (1 - ratio) * 100);
+    const rounded = Math.round(saving);
+    return `${rounded}% 절감`;
+}
+
+function computeAndApplyMaxStats() {
+    if (!npuData || !gpuData) return;
+    const frames = Math.min(npuData.frame_data.length, gpuData.frame_data.length);
+    let bestEnergyInverse = 0;
+    let bestEfficiencyAdv = 0;
+    for (let i = 0; i < frames; i++) {
+        const gp = gpuData.frame_data[i].power_w;
+        const np = npuData.frame_data[i].power_w;
+        const gf = gpuData.frame_data[i].fps;
+        const nf = npuData.frame_data[i].fps;
+        if (gp > 0 && np > 0) {
+            const inv = gp / np;
+            if (inv > bestEnergyInverse) bestEnergyInverse = inv;
+        }
+        if (gp > 0 && np > 0 && gf > 0 && nf > 0) {
+            const adv = (nf / np) / (gf / gp);
+            if (adv > bestEfficiencyAdv) bestEfficiencyAdv = adv;
+        }
+    }
+    maxStats.energyInverse = bestEnergyInverse;
+    maxStats.energyPercent = Math.max(0, Math.round((1 - 1 / bestEnergyInverse) * 100));
+    maxStats.efficiencyAdvantage = bestEfficiencyAdv;
+
+    // Do not overwrite energy KPI; it may contain fraction markup
+    const perfEl = document.querySelector('#performanceChart')?.closest('.chart-container')?.querySelector('.metric-value');
+    if (perfEl && Number.isFinite(maxStats.efficiencyAdvantage)) {
+        perfEl.textContent = `${maxStats.efficiencyAdvantage.toFixed(1)}배`;
+    }
+}
 
 // Load JSON data files
 async function loadDataFiles() {
@@ -139,7 +198,7 @@ function createFpsChart() {
     const fpsDisplay = document.querySelector('#fpsChart').closest('.chart-container')?.querySelector('.metric-value');
     if (fpsDisplay) {
         const fpsRatio = (npuFps / gpuFps).toFixed(1);
-        fpsDisplay.textContent = `${fpsRatio}x`;
+        fpsDisplay.textContent = `${fpsRatio}배`;
     }
     
     // Create static bar chart
@@ -152,12 +211,19 @@ function createFpsChart() {
                 data: [npuFps, gpuFps],
                 backgroundColor: ['#76ff03', '#b794f6'],
                 borderWidth: 0,
-                barThickness: 80
+                borderRadius: 6,
+                barThickness: 100,
+                maxBarThickness: 140,
+                // Keep bars centered but reduce gap between NPU and GPU
+                categoryPercentage: 0.85,
+                barPercentage: 0.95
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            // Keep a small edge padding so right bar doesn't touch the border
+            layout: { padding: { left: 8, right: 8 } },
             animation: {
                 duration: 1000,
                 easing: 'easeInOutQuart'
@@ -175,10 +241,12 @@ function createFpsChart() {
             },
             scales: {
                 x: {
+                    offset: true,
+                    grid: { display: false, offset: true },
                     grid: { display: false },
                     ticks: {
                         color: '#ffffff',
-                        font: { size: 14, weight: 'bold' }
+                        font: { size: 32, weight: 'bold' }
                     }
                 },
                 y: {
@@ -191,7 +259,7 @@ function createFpsChart() {
                     },
                     ticks: {
                         color: '#888888',
-                        font: { size: 12 }
+                        font: { size: 32 }
                     }
                 }
             }
@@ -204,7 +272,7 @@ function createFpsChart() {
                     meta.data.forEach((bar, index) => {
                         const data = dataset.data[index];
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 16px Arial';
+                        ctx.font = 'bold 40px Arial';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
                         ctx.fillText(data + ' Imgs/s', bar.x, bar.y - 5);
@@ -391,19 +459,7 @@ function startAnimationLoop() {
         const npuEfficiency = npuFps / npuPower;
         const gpuEfficiency = gpuFps / gpuPower;
         
-        // Calculate and update NPU Advantage
-        const npuAdvantage = npuEfficiency / gpuEfficiency;
-        const performanceAdvantageDisplay = document.querySelector('#performanceChart')?.closest('.chart-container')?.querySelector('.metric-value');
-        if (performanceAdvantageDisplay) {
-            performanceAdvantageDisplay.textContent = `${npuAdvantage.toFixed(1)}x`;
-        }
-        
-        // Update Energy Savings display (Power ratio)
-        const powerSavings = gpuPower / npuPower;
-        const energyDisplay = document.querySelector('#atomEnergyGauge')?.closest('.chart-container')?.querySelector('.metric-value');
-        if (energyDisplay) {
-            energyDisplay.textContent = `${powerSavings.toFixed(1)}x`;
-        }
+        // KPIs are fixed to dataset maxima; do not overwrite per-frame
         
         // Update NPU power gauge (real-time power consumption)
         if (charts.atomEnergy) {

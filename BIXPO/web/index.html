@@ -6,8 +6,18 @@
     <title>NPU vs GPU Performance Comparison</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-RXf+QSDCUQs6Q2B6x1Z7ZtZsa1+ltdI9G7xGqM2Q3rQp7x0xqSbGQ7o2Pp7R9q3pXq2tQnVtY8vJQ3k5b1hZ3A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
+    <section class="expo-banner" aria-label="협력 배너">
+        <div class="banner-content">
+            <div class="banner-left">
+                <h1><span class="eview-accent">e-View</span> 작업자 안전 관제 모니터링</h1>
+                <p>리벨리온 NPU에 한전의 AI 솔루션 기술을 더해, 현장의 위험요소를 실시간 감지하고 안전사고를 예방합니다.</p>
+            </div>
+        </div>
+    </section>
+    
     <div class="comparison-container">
         <!-- Top Section: Two Video Panels -->
         <div class="video-panels">
@@ -16,12 +26,15 @@
                 <div class="panel-header-bar">
                     <div class="device-info">
                         <div class="device-brand">
-                            <img src="assets/images/logo_rebellions.svg" alt="Rebellions" style="height: 30px; width: auto;">
+                            <img src="assets/images/logo_rebellions.svg" alt="Rebellions" class="rebellions-logo">
                         </div>
                         <div class="device-name">ATOM™-Max NPU</div>
                     </div>
                 </div>
                 <div class="video-wrapper">
+                    <div class="video-label">
+                        <span class="surveillance-path"><svg class="loc-icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M215.7 499.2C267 435 384 279.4 384 192 384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2 12.3 15.3 35.1 15.3 47.4 0zM192 272a80 80 0 1 1 0-160 80 80 0 1 1 0 160z"/></svg>충북본부 신충주변전소</span>
+                    </div>
                     <video class="video-player" id="videoPlayer1" autoplay loop muted>
                         <source src="assets/videos/output_npu.mp4" type="video/mp4">
                     </video>
@@ -33,12 +46,15 @@
                 <div class="panel-header-bar">
                     <div class="device-info">
                         <div class="device-brand">
-                            <img src="assets/images/logo_nvidia.svg" alt="NVIDIA" style="height: 24px; width: auto;">
+                            <img src="assets/images/logo_nvidia.svg" alt="NVIDIA" class="nvidia-logo">
                         </div>
                         <div class="device-name">L40S GPU</div>
                     </div>
                 </div>
                 <div class="video-wrapper">
+                    <div class="video-label">
+                        <span class="surveillance-path"><svg class="loc-icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M215.7 499.2C267 435 384 279.4 384 192 384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2 12.3 15.3 35.1 15.3 47.4 0zM192 272a80 80 0 1 1 0-160 80 80 0 1 1 0 160z"/></svg>충북본부 신충주변전소</span>
+                    </div>
                     <video class="video-player" id="videoPlayer2" autoplay loop muted>
                         <source src="assets/videos/output_gpu.mp4" type="video/mp4">
                     </video>
@@ -48,24 +64,23 @@
 
         <!-- Bottom Section: Three Charts -->
         <div class="charts-section">
+            <div class="global-legend">
+                <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+            </div>
             <!-- FPS Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>Processing Speed</h3>
-                    <div class="legend">
-                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
-                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    <div class="chart-title-wrap">
+                        <span class="chart-subtitle">동급 GPU 대비</span>
+                        <h3 class="chart-title-badge">처리속도</h3>
                     </div>
+                    <div class="metric-display"><span class="metric-label">최대</span><span class="metric-value">1.8배</span></div>
                 </div>
                 <div class="chart-container">
-                    <div class="metric-display">
-                        <span class="metric-label">NPU Advantage</span>
-                        <span class="metric-value">1.8x</span>
-                    </div>
                     <canvas id="fpsChart"></canvas>
                     <div class="chart-footer">
                         <span class="chart-label">Throughput (Imgs/s)</span>
-                        <span class="chart-action"></span>
                     </div>
                 </div>
             </div>
@@ -73,24 +88,20 @@
             <!-- Energy Consumption Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>Energy consumption</h3>
-                    <div class="legend">
-                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
-                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    <div class="chart-title-wrap">
+                        <span class="chart-subtitle">동급 GPU 대비</span>
+                        <h3 class="chart-title-badge">전력소비량</h3>
                     </div>
+                    <div class="metric-display"><span class="metric-label">약</span><span class="metric-value energy-fixed">50% 이하</span></div>
                 </div>
                 <div class="chart-container">
-                    <div class="metric-display">
-                        <span class="metric-label">Energy Savings</span>
-                        <span class="metric-value">1.7x</span>
-                    </div>
                     <div class="gauge-wrapper">
                         <div class="gauge atom-gauge">
                             <canvas id="atomEnergyGauge"></canvas>
                             <div class="gauge-label">
                                 <div class="gauge-name">ATOM™-Max</div>
                                 <div class="gauge-value">530<span class="unit">J</span></div>
-                                <div class="gauge-max">Total Energy</div>
+                                <div class="gauge-max">총 에너지</div>
                             </div>
                         </div>
                         <div class="gauge nvidia-gauge">
@@ -98,7 +109,7 @@
                             <div class="gauge-label">
                                 <div class="gauge-name">L40S</div>
                                 <div class="gauge-value">915<span class="unit">J</span></div>
-                                <div class="gauge-max">Total Energy</div>
+                                <div class="gauge-max">총 에너지</div>
                             </div>
                         </div>
                     </div>
@@ -108,28 +119,33 @@
             <!-- Performance Efficiency Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>Performance efficiency</h3>
-                    <div class="legend">
-                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
-                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    <div class="chart-title-wrap">
+                        <span class="chart-subtitle">동급 GPU 대비</span>
+                        <h3 class="chart-title-badge">성능효율</h3>
                     </div>
+                    <div class="metric-display"><span class="metric-label">최대</span><span class="metric-value">2.7배</span></div>
                 </div>
                 <div class="chart-container">
-                    <div class="metric-display">
-                        <span class="metric-label">NPU Advantage</span>
-                        <span class="metric-value">1.0x</span>
-                    </div>
                     <canvas id="performanceChart"></canvas>
                     <div class="chart-footer">
-                        <span class="chart-label">↑ FPS/Watt</span>
+                        <span class="chart-label">FPS/Watt</span>
                         <span class="chart-action">Time →</span>
                     </div>
                 </div>
             </div>
+            <!-- Promo Panel -->
+            <div class="promo-panel">
+                <div class="promo-image" role="img" aria-label="Rebellions ATOM product image">
+                    <img src="assets/images/CA25.jpg" alt="Rebellions ATOM" />
+                </div>
+                <div class="promo-caption">現 ICT기획처 · ICT운영처 시범운영 중</div>
+                <div class="promo-logos">
+                    <img class="kepco" src="assets/images/logo_kepco.png" alt="KEPCO">
+                    <img class="rebellions" src="assets/images/logo_rebellions_positive.png" alt="Rebellions">
+                </div>
+            </div>
         </div>
     </div>
-
     <script src="assets/js/script.js"></script>
 </body>
 </html>
-

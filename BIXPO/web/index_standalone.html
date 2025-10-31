@@ -6,18 +6,14 @@
     <title>NPU vs GPU Performance Comparison</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-RXf+QSDCUQs6Q2B6x1Z7ZtZsa1+ltdI9G7xGqM2Q3rQp7x0xqSbGQ7o2Pp7R9q3pXq2tQnVtY8vJQ3k5b1hZ3A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
     <section class="expo-banner" aria-label="협력 배너">
         <div class="banner-content">
             <div class="banner-left">
-                <h1>e-View 작업자 안전 관제 모니터링</h1>
-                <p>AI 비전 기술로 작업자의 위험 행동을 실시간으로 감지하고 산업 재해를 예방합니다.</p>
-            </div>
-            <div class="banner-divider-v"></div>
-            <div class="banner-right vertical">
-                <img src="assets/images/logo_kepco.png" alt="한국전력공사" class="banner-logo kepco">
-                <img src="assets/images/logo_rebellions.svg" alt="리벨리온" class="banner-logo rebellions">
+                <h1><span class="eview-accent">e-View</span> 작업자 안전 관제 모니터링</h1>
+                <p>리벨리온 NPU에 한전의 AI 솔루션 기술을 더해, 현장의 위험요소를 실시간 감지하고 안전사고를 예방합니다.</p>
             </div>
         </div>
     </section>
@@ -37,7 +33,7 @@
                 </div>
                 <div class="video-wrapper">
                     <div class="video-label">
-                        <span class="surveillance-path">충북본부 신충주변전소</span>
+                        <span class="surveillance-path"><svg class="loc-icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M215.7 499.2C267 435 384 279.4 384 192 384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2 12.3 15.3 35.1 15.3 47.4 0zM192 272a80 80 0 1 1 0-160 80 80 0 1 1 0 160z"/></svg>충북본부 신충주변전소</span>
                     </div>
                     <video class="video-player" id="videoPlayer1" autoplay loop muted>
                         <source src="assets/videos/output_npu.mp4" type="video/mp4">
@@ -57,7 +53,7 @@
                 </div>
                 <div class="video-wrapper">
                     <div class="video-label">
-                        <span class="surveillance-path">충북본부 신충주변전소</span>
+                        <span class="surveillance-path"><svg class="loc-icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M215.7 499.2C267 435 384 279.4 384 192 384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2 12.3 15.3 35.1 15.3 47.4 0zM192 272a80 80 0 1 1 0-160 80 80 0 1 1 0 160z"/></svg>충북본부 신충주변전소</span>
                     </div>
                     <video class="video-player" id="videoPlayer2" autoplay loop muted>
                         <source src="assets/videos/output_gpu.mp4" type="video/mp4">
@@ -68,20 +64,20 @@
 
         <!-- Bottom Section: Three Charts -->
         <div class="charts-section">
+            <div class="global-legend">
+                <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
+                <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+            </div>
             <!-- FPS Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>처리 속도</h3>
-                    <div class="legend">
-                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
-                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    <div class="chart-title-wrap">
+                        <span class="chart-subtitle">동급 GPU 대비</span>
+                        <h3 class="chart-title-badge">처리속도</h3>
                     </div>
+                    <div class="metric-display"><span class="metric-label">최대</span><span class="metric-value">1.8배</span></div>
                 </div>
                 <div class="chart-container">
-                    <div class="metric-display">
-                        <span class="metric-label">NPU 우위</span>
-                        <span class="metric-value">1.8x</span>
-                    </div>
                     <canvas id="fpsChart"></canvas>
                     <div class="chart-footer">
                         <span class="chart-label">Throughput (Imgs/s)</span>
@@ -92,17 +88,13 @@
             <!-- Energy Consumption Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>에너지 소비</h3>
-                    <div class="legend">
-                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
-                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    <div class="chart-title-wrap">
+                        <span class="chart-subtitle">동급 GPU 대비</span>
+                        <h3 class="chart-title-badge">전력소비량</h3>
                     </div>
+                    <div class="metric-display"><span class="metric-label">약</span><span class="metric-value energy-fixed">50% 이하</span></div>
                 </div>
                 <div class="chart-container">
-                    <div class="metric-display">
-                        <span class="metric-label">에너지 절감</span>
-                        <span class="metric-value">1.7x</span>
-                    </div>
                     <div class="gauge-wrapper">
                         <div class="gauge atom-gauge">
                             <canvas id="atomEnergyGauge"></canvas>
@@ -127,17 +119,13 @@
             <!-- Performance Efficiency Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>성능 효율</h3>
-                    <div class="legend">
-                        <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
-                        <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
+                    <div class="chart-title-wrap">
+                        <span class="chart-subtitle">동급 GPU 대비</span>
+                        <h3 class="chart-title-badge">성능효율</h3>
                     </div>
+                    <div class="metric-display"><span class="metric-label">최대</span><span class="metric-value">2.7배</span></div>
                 </div>
                 <div class="chart-container">
-                    <div class="metric-display">
-                        <span class="metric-label">NPU 우위</span>
-                        <span class="metric-value">1.0x</span>
-                    </div>
                     <canvas id="performanceChart"></canvas>
                     <div class="chart-footer">
                         <span class="chart-label">FPS/Watt</span>
@@ -145,9 +133,19 @@
                     </div>
                 </div>
             </div>
+            <!-- Promo Panel -->
+            <div class="promo-panel">
+                <div class="promo-image" role="img" aria-label="Rebellions ATOM product image">
+                    <img src="assets/images/CA25.jpg" alt="Rebellions ATOM" />
+                </div>
+                <div class="promo-caption">現 ICT기획처 · ICT운영처 시범운영 중</div>
+                <div class="promo-logos">
+                    <img class="kepco" src="assets/images/logo_kepco.png" alt="KEPCO">
+                    <img class="rebellions" src="assets/images/logo_rebellions_positive.png" alt="Rebellions">
+                </div>
+            </div>
         </div>
     </div>
-
     
 
     <!-- Embedded Data -->
@@ -169,11 +167,12 @@ let animationState = {
     maxDataPoints: 50
 };
 
-// Detect 4K resolution and set font scale
-const is4K = window.innerWidth >= 3600 && window.innerHeight >= 2000;
-const fontScale = is4K ? 2.5 : 1;
-
-console.log(`Resolution: ${window.innerWidth}x${window.innerHeight}, 4K mode: ${is4K}, Font scale: ${fontScale}`);
+// Peak stats across dataset
+let maxStats = {
+    energyInverse: null,       // max GPU/NPU power ratio
+    energyPercent: null,       // derived percent saving vs GPU
+    efficiencyAdvantage: null  // max (NPU fps/W) / (GPU fps/W)
+};
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
@@ -181,6 +180,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Load data files
     await loadDataFiles();
+    // Compute and apply dataset maxima to fixed KPIs
+    computeAndApplyMaxStats();
     
     // Create charts first
     createFpsChart();
@@ -192,6 +193,56 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('Initialization complete');
 });
+
+// Format power savings label as "1/2 이하" style or "% 절감"
+function formatPowerSavingsLabel(npuPower, gpuPower) {
+    if (!npuPower || !gpuPower) return '';
+    const ratio = npuPower / gpuPower; // NPU compared to GPU
+    const inverse = gpuPower / npuPower; // GPU compared to NPU
+
+    // Prefer common fractions when GPU power is an integer multiple of NPU
+    const fractionSteps = [8, 6, 5, 4, 3, 2]; // check higher multiples first
+    for (const k of fractionSteps) {
+        if (inverse >= k - 0.15) { // allow small tolerance
+            return `1/${k} 이하`;
+        }
+    }
+
+    // Otherwise show percentage saving
+    const saving = Math.max(0, (1 - ratio) * 100);
+    const rounded = Math.round(saving);
+    return `${rounded}% 절감`;
+}
+
+function computeAndApplyMaxStats() {
+    if (!npuData || !gpuData) return;
+    const frames = Math.min(npuData.frame_data.length, gpuData.frame_data.length);
+    let bestEnergyInverse = 0;
+    let bestEfficiencyAdv = 0;
+    for (let i = 0; i < frames; i++) {
+        const gp = gpuData.frame_data[i].power_w;
+        const np = npuData.frame_data[i].power_w;
+        const gf = gpuData.frame_data[i].fps;
+        const nf = npuData.frame_data[i].fps;
+        if (gp > 0 && np > 0) {
+            const inv = gp / np;
+            if (inv > bestEnergyInverse) bestEnergyInverse = inv;
+        }
+        if (gp > 0 && np > 0 && gf > 0 && nf > 0) {
+            const adv = (nf / np) / (gf / gp);
+            if (adv > bestEfficiencyAdv) bestEfficiencyAdv = adv;
+        }
+    }
+    maxStats.energyInverse = bestEnergyInverse;
+    maxStats.energyPercent = Math.max(0, Math.round((1 - 1 / bestEnergyInverse) * 100));
+    maxStats.efficiencyAdvantage = bestEfficiencyAdv;
+
+    // Do not overwrite energy KPI; it may contain fraction markup
+    const perfEl = document.querySelector('#performanceChart')?.closest('.chart-container')?.querySelector('.metric-value');
+    if (perfEl && Number.isFinite(maxStats.efficiencyAdvantage)) {
+        perfEl.textContent = `${maxStats.efficiencyAdvantage.toFixed(1)}배`;
+    }
+}
 
 // Load JSON data files
 async function loadDataFiles() {
@@ -299,7 +350,7 @@ function createFpsChart() {
     const fpsDisplay = document.querySelector('#fpsChart').closest('.chart-container')?.querySelector('.metric-value');
     if (fpsDisplay) {
         const fpsRatio = (npuFps / gpuFps).toFixed(1);
-        fpsDisplay.textContent = `${fpsRatio}x`;
+        fpsDisplay.textContent = `${fpsRatio}배`;
     }
     
     // Create static bar chart
@@ -312,14 +363,19 @@ function createFpsChart() {
                 data: [npuFps, gpuFps],
                 backgroundColor: ['#76ff03', '#b794f6'],
                 borderWidth: 0,
-                barThickness: 80,
-                categoryPercentage: 0.5,
-                barPercentage: 0.6
+                borderRadius: 6,
+                barThickness: 100,
+                maxBarThickness: 140,
+                // Keep bars centered but reduce gap between NPU and GPU
+                categoryPercentage: 0.85,
+                barPercentage: 0.95
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            // Keep a small edge padding so right bar doesn't touch the border
+            layout: { padding: { left: 8, right: 8 } },
             animation: {
                 duration: 1000,
                 easing: 'easeInOutQuart'
@@ -337,10 +393,12 @@ function createFpsChart() {
             },
             scales: {
                 x: {
+                    offset: true,
+                    grid: { display: false, offset: true },
                     grid: { display: false },
                     ticks: {
                         color: '#ffffff',
-                        font: { size: Math.round(14 * fontScale), weight: 'bold' }
+                        font: { size: 32, weight: 'bold' }
                     }
                 },
                 y: {
@@ -353,7 +411,7 @@ function createFpsChart() {
                     },
                     ticks: {
                         color: '#888888',
-                        font: { size: Math.round(12 * fontScale) }
+                        font: { size: 32 }
                     }
                 }
             }
@@ -366,10 +424,10 @@ function createFpsChart() {
                     meta.data.forEach((bar, index) => {
                         const data = dataset.data[index];
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = `bold ${Math.round(16 * fontScale)}px Arial`;
+                        ctx.font = 'bold 40px Arial';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
-                        ctx.fillText(data + ' Imgs/s', bar.x, bar.y - (5 * fontScale));
+                        ctx.fillText(data + ' Imgs/s', bar.x, bar.y - 5);
                     });
                 });
             }
@@ -480,7 +538,6 @@ function createEnergyChart() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 1,
                 cutout: '75%',
                 plugins: {
                     legend: { display: false },
@@ -508,7 +565,6 @@ function createEnergyChart() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 1,
                 cutout: '75%',
                 plugins: {
                     legend: { display: false },
@@ -555,19 +611,7 @@ function startAnimationLoop() {
         const npuEfficiency = npuFps / npuPower;
         const gpuEfficiency = gpuFps / gpuPower;
         
-        // Calculate and update NPU 우위
-        const npuAdvantage = npuEfficiency / gpuEfficiency;
-        const performanceAdvantageDisplay = document.querySelector('#performanceChart')?.closest('.chart-container')?.querySelector('.metric-value');
-        if (performanceAdvantageDisplay) {
-            performanceAdvantageDisplay.textContent = `${npuAdvantage.toFixed(1)}x`;
-        }
-        
-        // Update 에너지 절감 display (Power ratio)
-        const powerSavings = gpuPower / npuPower;
-        const energyDisplay = document.querySelector('#atomEnergyGauge')?.closest('.chart-container')?.querySelector('.metric-value');
-        if (energyDisplay) {
-            energyDisplay.textContent = `${powerSavings.toFixed(1)}x`;
-        }
+        // KPIs are fixed to dataset maxima; do not overwrite per-frame
         
         // Update NPU power gauge (real-time power consumption)
         if (charts.atomEnergy) {
@@ -631,4 +675,3 @@ console.log('Script loaded');
     </script>
 </body>
 </html>
-
