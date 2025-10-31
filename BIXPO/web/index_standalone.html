@@ -11,13 +11,13 @@
     <section class="expo-banner" aria-label="협력 배너">
         <div class="banner-content">
             <div class="banner-left">
-                <h1>작업자 안전 관제 모니터링</h1>
-                <p>AI 비전으로 위험 행동을 즉시 감지하고, 사고를 미리 막습니다.</p>
+                <h1>e-View 작업자 안전 관제 모니터링</h1>
+                <p>AI 비전 기술로 작업자의 위험 행동을 실시간으로 감지하고 산업 재해를 예방합니다.</p>
             </div>
             <div class="banner-divider-v"></div>
             <div class="banner-right vertical">
-                <img src="assets/images/logo_rebellions.svg" alt="리벨리온" class="banner-logo rebellions">
                 <img src="assets/images/logo_kepco.png" alt="한국전력공사" class="banner-logo kepco">
+                <img src="assets/images/logo_rebellions.svg" alt="리벨리온" class="banner-logo rebellions">
             </div>
         </div>
     </section>
@@ -37,7 +37,7 @@
                 </div>
                 <div class="video-wrapper">
                     <div class="video-label">
-                        <span class="surveillance-path">KEPCO 충북본부</span>
+                        <span class="surveillance-path">충북본부 신충주변전소</span>
                     </div>
                     <video class="video-player" id="videoPlayer1" autoplay loop muted>
                         <source src="assets/videos/output_npu.mp4" type="video/mp4">
@@ -57,7 +57,7 @@
                 </div>
                 <div class="video-wrapper">
                     <div class="video-label">
-                        <span class="surveillance-path">KEPCO 충북본부</span>
+                        <span class="surveillance-path">충북본부 신충주변전소</span>
                     </div>
                     <video class="video-player" id="videoPlayer2" autoplay loop muted>
                         <source src="assets/videos/output_gpu.mp4" type="video/mp4">
@@ -71,7 +71,7 @@
             <!-- FPS Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>Processing Speed</h3>
+                    <h3>처리 속도</h3>
                     <div class="legend">
                         <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
                         <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
@@ -79,7 +79,7 @@
                 </div>
                 <div class="chart-container">
                     <div class="metric-display">
-                        <span class="metric-label">NPU Advantage</span>
+                        <span class="metric-label">NPU 우위</span>
                         <span class="metric-value">1.8x</span>
                     </div>
                     <canvas id="fpsChart"></canvas>
@@ -92,7 +92,7 @@
             <!-- Energy Consumption Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>Energy Consumption</h3>
+                    <h3>에너지 소비</h3>
                     <div class="legend">
                         <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
                         <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
@@ -100,7 +100,7 @@
                 </div>
                 <div class="chart-container">
                     <div class="metric-display">
-                        <span class="metric-label">Energy Savings</span>
+                        <span class="metric-label">에너지 절감</span>
                         <span class="metric-value">1.7x</span>
                     </div>
                     <div class="gauge-wrapper">
@@ -109,7 +109,7 @@
                             <div class="gauge-label">
                                 <div class="gauge-name">ATOM™-Max</div>
                                 <div class="gauge-value">530<span class="unit">J</span></div>
-                                <div class="gauge-max">Total Energy</div>
+                                <div class="gauge-max">총 에너지</div>
                             </div>
                         </div>
                         <div class="gauge nvidia-gauge">
@@ -117,7 +117,7 @@
                             <div class="gauge-label">
                                 <div class="gauge-name">L40S</div>
                                 <div class="gauge-value">915<span class="unit">J</span></div>
-                                <div class="gauge-max">Total Energy</div>
+                                <div class="gauge-max">총 에너지</div>
                             </div>
                         </div>
                     </div>
@@ -127,7 +127,7 @@
             <!-- Performance Efficiency Chart -->
             <div class="chart-panel">
                 <div class="chart-header">
-                    <h3>Performance Efficiency</h3>
+                    <h3>성능 효율</h3>
                     <div class="legend">
                         <span class="legend-item atom"><span class="legend-dot"></span>ATOM™-Max NPU</span>
                         <span class="legend-item nvidia"><span class="legend-dot"></span>L40S GPU</span>
@@ -135,7 +135,7 @@
                 </div>
                 <div class="chart-container">
                     <div class="metric-display">
-                        <span class="metric-label">NPU Advantage</span>
+                        <span class="metric-label">NPU 우위</span>
                         <span class="metric-value">1.0x</span>
                     </div>
                     <canvas id="performanceChart"></canvas>
@@ -312,7 +312,9 @@ function createFpsChart() {
                 data: [npuFps, gpuFps],
                 backgroundColor: ['#76ff03', '#b794f6'],
                 borderWidth: 0,
-                barThickness: 80
+                barThickness: 80,
+                categoryPercentage: 0.5,
+                barPercentage: 0.6
             }]
         },
         options: {
@@ -553,14 +555,14 @@ function startAnimationLoop() {
         const npuEfficiency = npuFps / npuPower;
         const gpuEfficiency = gpuFps / gpuPower;
         
-        // Calculate and update NPU Advantage
+        // Calculate and update NPU 우위
         const npuAdvantage = npuEfficiency / gpuEfficiency;
         const performanceAdvantageDisplay = document.querySelector('#performanceChart')?.closest('.chart-container')?.querySelector('.metric-value');
         if (performanceAdvantageDisplay) {
             performanceAdvantageDisplay.textContent = `${npuAdvantage.toFixed(1)}x`;
         }
         
-        // Update Energy Savings display (Power ratio)
+        // Update 에너지 절감 display (Power ratio)
         const powerSavings = gpuPower / npuPower;
         const energyDisplay = document.querySelector('#atomEnergyGauge')?.closest('.chart-container')?.querySelector('.metric-value');
         if (energyDisplay) {
