@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YOLO Inference Pipeline - Rebellions NPU</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #0d1117;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 1920px;
+      width: 100%;
+    }
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <!-- 그림자 효과 -->
+        <filter id="shadow">
+          <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+        </filter>
+        
+        <!-- 화살표 마커 -->
+        <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+          <polygon points="0 0, 12 6, 0 12" fill="#64ffda" />
+        </marker>
+        
+        <!-- 그라디언트 -->
+        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#1a1d29;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      
+      <!-- 다크 배경 (그라디언트) -->
+      <rect width="1920" height="1080" fill="url(#bgGradient)"/>
+      
+      <!-- 제목 -->
+      <text x="100" y="80" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#ffffff" letter-spacing="1">
+        YOLO Inference Pipeline
+      </text>
+      <text x="100" y="115" font-family="Arial, sans-serif" font-size="20" fill="#64ffda" letter-spacing="0.5">
+        Powered by Rebellions ATOM NPU
+      </text>
+  
+  <!-- 1. Input Stage -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="180" width="330" height="330" rx="20" fill="#23283a" stroke="#2d3142" stroke-width="3"/>
+    
+    <!-- 헤더 -->
+    <rect x="100" y="180" width="330" height="70" rx="20" fill="#2d3548"/>
+    <circle cx="145" cy="215" r="18" fill="#667eea"/>
+    <text x="180" y="223" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff" letter-spacing="0.5">
+      Input Source
+    </text>
+    
+    <!-- 카메라 섹션 -->
+    <g transform="translate(125, 275)">
+      <rect x="0" y="0" width="280" height="95" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <circle cx="35" cy="47" r="24" fill="#667eea" opacity="0.2"/>
+      <rect x="25" cy="37" width="20" height="20" rx="3" fill="#667eea"/>
+      <circle cx="35" cy="44" r="4" fill="#fff"/>
+      <text x="75" y="42" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#e0e0e0" letter-spacing="0.3">
+        USB/Built-in Camera
+      </text>
+      <text x="75" y="65" font-family="Arial, sans-serif" font-size="15" fill="#a0a0a0" letter-spacing="0.3">
+        960x540 @ 30 FPS
+      </text>
+    </g>
+    
+    <!-- Resolution 라벨 -->
+    <g transform="translate(125, 390)">
+      <rect x="0" y="0" width="280" height="85" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="140" y="30" font-family="Arial, sans-serif" font-size="15" fill="#64ffda" text-anchor="middle" letter-spacing="0.3">
+        Format
+      </text>
+      <text x="140" y="60" font-family="Arial, sans-serif" font-size="21" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">
+        MJPEG Stream
+      </text>
+    </g>
+  </g>
+  
+  <!-- 화살표: Input → Preprocessing -->
+  <text x="495" y="320" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#64ffda" text-anchor="middle" letter-spacing="0.5">Frame Data</text>
+  <path d="M 440 345 L 550 345" stroke="#64ffda" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- 2. Preprocessing Stage -->
+  <g filter="url(#shadow)">
+    <rect x="560" y="180" width="330" height="330" rx="20" fill="#23283a" stroke="#2d3142" stroke-width="3"/>
+    
+    <!-- 헤더 -->
+    <rect x="560" y="180" width="330" height="70" rx="20" fill="#2d3548"/>
+    <circle cx="605" cy="215" r="18" fill="#11998e"/>
+    <text x="640" y="223" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff" letter-spacing="0.5">
+      Preprocessing
+    </text>
+    <rect x="800" y="200" width="70" height="26" rx="6" fill="#11998e" opacity="0.3"/>
+    <text x="835" y="218" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#11998e" text-anchor="middle" letter-spacing="0.3">CPU</text>
+    
+    <!-- Operations -->
+    <g transform="translate(585, 275)">
+      <rect x="0" y="0" width="280" height="190" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="20" y="30" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Resize: 960×540 → 800×800
+      </text>
+      <text x="20" y="60" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Letterbox padding
+      </text>
+      <text x="20" y="90" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • BGR → RGB conversion
+      </text>
+      <text x="20" y="120" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Normalize (0-255 → 0-1)
+      </text>
+      <text x="20" y="150" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Transpose (HWC → CHW)
+      </text>
+    </g>
+  </g>
+  
+  <!-- 화살표: Preprocessing → NPU -->
+  <text x="955" y="320" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#64ffda" text-anchor="middle" letter-spacing="0.5">Tensor</text>
+  <path d="M 900 345 L 1010 345" stroke="#64ffda" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- 3. NPU Inference Stage -->
+  <g filter="url(#shadow)">
+    <rect x="1020" y="180" width="330" height="330" rx="20" fill="#23283a" stroke="#2d3142" stroke-width="3"/>
+    
+    <!-- 헤더 -->
+    <rect x="1020" y="180" width="330" height="70" rx="20" fill="#2d3548"/>
+    <circle cx="1065" cy="215" r="18" fill="#6a11cb"/>
+    <text x="1100" y="223" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff" letter-spacing="0.5">
+      NPU Inference
+    </text>
+    
+    <!-- RBLN Badge -->
+    <rect x="1250" y="198" width="90" height="30" rx="8" fill="#6a11cb"/>
+    <text x="1295" y="219" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.3">RBLN NPU</text>
+    
+    <!-- Model Info -->
+    <g transform="translate(1045, 275)">
+      <rect x="0" y="0" width="280" height="85" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="20" y="28" font-family="Arial, sans-serif" font-size="17" font-weight="bold" fill="#ffffff" letter-spacing="0.3">
+        Model: YOLOv11
+      </text>
+      <text x="20" y="53" font-family="Arial, sans-serif" font-size="15" fill="#a0a0a0" letter-spacing="0.3">
+        Input: 1×3×800×800 (NCHW)
+      </text>
+      <text x="20" y="72" font-family="Arial, sans-serif" font-size="15" fill="#a0a0a0" letter-spacing="0.3">
+        Format: .rbln compiled model
+      </text>
+    </g>
+    
+    <!-- Performance -->
+    <g transform="translate(1045, 380)">
+      <rect x="0" y="0" width="130" height="75" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="65" y="25" font-family="Arial, sans-serif" font-size="14" fill="#64ffda" text-anchor="middle" letter-spacing="0.3">
+        Latency
+      </text>
+      <text x="65" y="55" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">
+        3-5ms
+      </text>
+    </g>
+    
+    <g transform="translate(1195, 380)">
+      <rect x="0" y="0" width="130" height="75" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="65" y="25" font-family="Arial, sans-serif" font-size="14" fill="#64ffda" text-anchor="middle" letter-spacing="0.3">
+        Utilization
+      </text>
+      <text x="65" y="55" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">
+        40-60%
+      </text>
+    </g>
+  </g>
+  
+  <!-- 화살표: NPU → Postprocessing -->
+  <text x="1220" y="550" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#64ffda" letter-spacing="0.5">Detection</text>
+  <path d="M 1185 520 L 1185 600" stroke="#64ffda" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- 4. Postprocessing Stage -->
+  <g filter="url(#shadow)">
+    <rect x="1020" y="610" width="330" height="310" rx="20" fill="#23283a" stroke="#2d3142" stroke-width="3"/>
+    
+    <!-- 헤더 -->
+    <rect x="1020" y="610" width="330" height="70" rx="20" fill="#2d3548"/>
+    <circle cx="1065" cy="645" r="18" fill="#f093fb"/>
+    <text x="1100" y="653" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff" letter-spacing="0.5">
+      Postprocessing
+    </text>
+    <rect x="1260" y="628" width="70" height="26" rx="6" fill="#f093fb" opacity="0.3"/>
+    <text x="1295" y="646" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f093fb" text-anchor="middle" letter-spacing="0.3">CPU</text>
+    
+    <!-- Operations -->
+    <g transform="translate(1045, 705)">
+      <rect x="0" y="0" width="280" height="190" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="20" y="30" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • NMS (Non-Max Suppression)
+      </text>
+      <text x="20" y="60" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Confidence filter (>0.25)
+      </text>
+      <text x="20" y="90" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Bounding box transform
+      </text>
+      <text x="20" y="120" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Class-wise extraction
+      </text>
+      <text x="20" y="150" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Detection parsing
+      </text>
+    </g>
+  </g>
+  
+  <!-- 화살표: Postprocessing → Output -->
+  <text x="1415" y="740" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#64ffda" text-anchor="middle" letter-spacing="0.5">Results</text>
+  <path d="M 1360 765 L 1470 765" stroke="#64ffda" stroke-width="4" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- 5. Output/Display Stage -->
+  <g filter="url(#shadow)">
+    <rect x="1480" y="610" width="330" height="310" rx="20" fill="#23283a" stroke="#2d3142" stroke-width="3"/>
+    
+    <!-- 헤더 -->
+    <rect x="1480" y="610" width="330" height="70" rx="20" fill="#2d3548"/>
+    <circle cx="1525" cy="645" r="18" fill="#4facfe"/>
+    <text x="1560" y="653" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff" letter-spacing="0.5">
+      Output Display
+    </text>
+    <rect x="1720" y="628" width="70" height="26" rx="6" fill="#4facfe" opacity="0.3"/>
+    <text x="1755" y="646" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#4facfe" text-anchor="middle" letter-spacing="0.3">GPU</text>
+    
+    <!-- Rendering -->
+    <g transform="translate(1505, 705)">
+      <rect x="0" y="0" width="280" height="95" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="20" y="30" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Bounding box rendering
+      </text>
+      <text x="20" y="55" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • Class/confidence overlay
+      </text>
+      <text x="20" y="80" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        • JPEG encoding (Q:90)
+      </text>
+    </g>
+    
+    <!-- Streaming -->
+    <g transform="translate(1505, 820)">
+      <rect x="0" y="0" width="280" height="65" rx="14" fill="#2d3548" stroke="#3d4354" stroke-width="2"/>
+      <text x="140" y="25" font-family="Arial, sans-serif" font-size="15" fill="#64ffda" text-anchor="middle" letter-spacing="0.3">
+        Web Streaming
+      </text>
+      <text x="140" y="48" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">
+        MJPEG (Flask) @ 20-25 FPS
+      </text>
+    </g>
+  </g>
+  
+  <!-- Performance Summary Box -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="610" width="860" height="145" rx="20" fill="#23283a" stroke="#2d3142" stroke-width="3"/>
+    <rect x="100" y="610" width="860" height="60" rx="20" fill="#2d3548"/>
+    <circle cx="145" cy="640" r="16" fill="#64ffda"/>
+    <text x="175" y="648" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff" letter-spacing="0.5">
+      Pipeline Performance Summary
+    </text>
+    
+    <!-- Metrics -->
+    <g transform="translate(130, 695)">
+      <text x="0" y="0" font-family="Arial, sans-serif" font-size="17" fill="#a0a0a0" letter-spacing="0.3">
+        End-to-End Latency:
+      </text>
+      <text x="200" y="0" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#64ffda" letter-spacing="0.5">
+        50-80ms
+      </text>
+      
+      <text x="0" y="38" font-family="Arial, sans-serif" font-size="17" fill="#a0a0a0" letter-spacing="0.3">
+        Total Throughput:
+      </text>
+      <text x="200" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#64ffda" letter-spacing="0.5">
+        20-25 FPS
+      </text>
+    </g>
+    
+    <g transform="translate(520, 695)">
+      <text x="0" y="0" font-family="Arial, sans-serif" font-size="17" fill="#a0a0a0" letter-spacing="0.3">
+        NPU Inference:
+      </text>
+      <text x="150" y="0" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#6a11cb" letter-spacing="0.5">
+        3-5ms
+      </text>
+      
+      <text x="0" y="38" font-family="Arial, sans-serif" font-size="17" fill="#a0a0a0" letter-spacing="0.3">
+        CPU Overhead:
+      </text>
+      <text x="150" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#11998e" letter-spacing="0.5">
+        45-75ms
+      </text>
+    </g>
+  </g>
+  
+  <!-- Detection Classes Info -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="790" width="860" height="130" rx="20" fill="#23283a" stroke="#2d3142" stroke-width="3"/>
+    <rect x="100" y="790" width="860" height="60" rx="20" fill="#2d3548"/>
+    <circle cx="145" cy="820" r="16" fill="#f093fb"/>
+    <text x="175" y="828" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff" letter-spacing="0.5">
+      Detection Classes (9 Classes)
+    </text>
+    
+    <g transform="translate(130, 870)">
+      <text x="0" y="0" font-family="Arial, sans-serif" font-size="16" fill="#e0e0e0" letter-spacing="0.3">
+        🔥 Fire & Smoke (4) • 👤 Person, Head, Falling (3) • ⛑️ Helmet, Ladder (2)
+      </text>
+      <text x="0" y="28" font-family="Arial, sans-serif" font-size="15" fill="#a0a0a0" letter-spacing="0.3">
+        Confidence Threshold: 0.25 | IOU Threshold: 0.45 | Model: YOLOv11 (.rbln)
+      </text>
+    </g>
+  </g>
+  
+  <!-- Footer -->
+  <text x="100" y="1040" font-family="Arial, sans-serif" font-size="14" fill="#555" letter-spacing="0.3">
+    © 2025 Rebellions Inc. All rights reserved.
+  </text>
+  <text x="1820" y="1040" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#64ffda" text-anchor="end" letter-spacing="0.5">
+    rebellions_
+  </text>
+    </svg>
+  </div>
+</body>
+</html>
