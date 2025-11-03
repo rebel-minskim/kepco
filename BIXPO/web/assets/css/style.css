@@ -41,25 +41,45 @@ body {
 .video-panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1vh;
+    gap: 1.2vh;
     flex: 1 1 70%;
     min-height: 0;
+    position: relative;
+}
+
+.video-panels::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.06) 100%);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 2;
 }
 
 .video-panel {
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     height: 100%;
+    border: 10px solid transparent;
+    background: #0b0b0e;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
 }
 
 .atom-panel {
-    background: linear-gradient(135deg, #1a2f1a 0%, #0d1a0d 100%);
+    background: linear-gradient(135deg, #122412 0%, #0b140b 100%);
+    border-color: rgba(118,255,3,0.35);
 }
 
 .nvidia-panel {
-    background: linear-gradient(135deg, #2a2050 0%, #1a1530 100%);
+    background: linear-gradient(135deg, #241b44 0%, #15102a 100%);
+    border-color: rgba(183,148,246,0.35);
 }
 
 .panel-header-bar {
@@ -264,15 +284,16 @@ body {
 .chart-panel {
     display: flex;
     flex-direction: column;
-    background: #ffffff08;
-    border-radius: 2vh;
+    background: rgba(18,18,20,0.9);
+    border-radius: 16px;
     padding: 2.0vh 2vh;
-    box-shadow: 0 0 0.6vh #00000026 inset;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
     overflow: hidden;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
     min-height: 0;
     height: 100%;
     position: relative;
+    border: 10px solid rgba(255,255,255,0.10);
 }
 
 .chart-header {
