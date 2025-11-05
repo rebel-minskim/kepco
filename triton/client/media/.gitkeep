@@ -1,0 +1,2 @@
+# This file ensures the media directory is tracked by git
+# Media files (*.mp4, *.avi, etc.) are ignored but directory structure is preserved
