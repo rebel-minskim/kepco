@@ -133,9 +133,27 @@ def postprocess_output(output, conf_thresh, iou_thresh, scale, padding, orig_sha
     x2 = x_center + width / 2
     y2 = y_center + height / 2
     boxes = np.stack([x1, y1, x2, y2], axis=1)
-    keep_indices = nms(boxes, scores, iou_thresh)
+    
+    # Class-wise NMS: Apply NMS separately for each class
+    # This allows overlapping detections of different classes (e.g., person + falling)
+    keep_indices = []
+    unique_classes = np.unique(class_ids)
+    
+    for class_id in unique_classes:
+        class_mask = class_ids == class_id
+        class_boxes = boxes[class_mask]
+        class_scores = scores[class_mask]
+        class_indices = np.where(class_mask)[0]
+        
+        # Apply NMS for this class only
+        class_keep = nms(class_boxes, class_scores, iou_thresh)
+        
+        # Store the original indices
+        keep_indices.extend(class_indices[class_keep].tolist())
+    
     if len(keep_indices) == 0:
         return []
+    
     boxes = boxes[keep_indices]
     scores = scores[keep_indices]
     class_ids = class_ids[keep_indices]

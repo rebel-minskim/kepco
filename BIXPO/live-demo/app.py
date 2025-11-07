@@ -150,11 +150,12 @@ if source_option == "Live Webcam Stream":
                     st.error("Failed to capture frame from webcam")
                     break
                 
-                # Run inference
+                # Run inference with class-wise NMS
                 results = model.predict(
                     source=frame,
                     conf=confidence,
                     iou=iou_threshold,
+                    agnostic=False,  # Class-wise NMS (allows overlapping person + falling)
                     show=False,
                     save=False,
                     verbose=False
@@ -220,11 +221,12 @@ elif source_option == "Webcam Snapshot":
         with col1:
             st.image(image, caption="Original Image", use_container_width=True)
         
-        # Run inference
+        # Run inference with class-wise NMS
         results = model.predict(
             source=img_array,
             conf=confidence,
             iou=iou_threshold,
+            agnostic=False,  # Class-wise NMS (allows overlapping person + falling)
             show=False,
             save=False
         )
@@ -290,11 +292,12 @@ elif source_option == "Upload Video":
                     if not ret:
                         break
                     
-                    # Run inference
+                    # Run inference with class-wise NMS
                     results = model.predict(
                         source=frame,
                         conf=confidence,
                         iou=iou_threshold,
+                        agnostic=False,  # Class-wise NMS (allows overlapping person + falling)
                         show=False,
                         save=False,
                         verbose=False
@@ -336,12 +339,13 @@ elif source_option == "Upload Image":
         with col1:
             st.image(image, caption="Original Image", use_container_width=True)
         
-        # Run inference
+        # Run inference with class-wise NMS
         with st.spinner("Running detection..."):
             results = model.predict(
                 source=img_array,
                 conf=confidence,
                 iou=iou_threshold,
+                agnostic=False,  # Class-wise NMS (allows overlapping person + falling)
                 show=False,
                 save=False
             )
