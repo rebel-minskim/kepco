@@ -85,7 +85,7 @@ class TritonPythonModel:
         # Create rbln runtime module
         self.module = rebel.Runtime(rbln_path, device=device_id)
         # Minimal threads since inference is hardware-bound, not CPU-bound
-        self.module.num_threads = 8
+        self.module.num_threads = 2
         
         # Performance tracking
         self.inst_name = inst_name
@@ -117,60 +117,18 @@ class TritonPythonModel:
           A list of pb_utils.InferenceResponse. The length of this list must
           be the same as `requests`
         """
-        start_total = time.perf_counter()
         output0_dtype = self.output0_dtype
         responses = []
 
         for request in requests:
-            # Data preparation timing
-            t0 = time.perf_counter()
             in_0 = pb_utils.get_input_tensor_by_name(request, "INPUT__0")
             input_data = in_0.as_numpy()
-            t1 = time.perf_counter()
-            self.data_prep_time += (t1 - t0)
-
-            # Run inference timing
-            t2 = time.perf_counter()
             result = self.module.run(input_data)
-            t3 = time.perf_counter()
-            self.inference_time += (t3 - t2)
 
-            # Response creation timing
-            t4 = time.perf_counter()
             out_tensor_0 = pb_utils.Tensor("OUTPUT__0", result[0].astype(output0_dtype))
             inference_response = pb_utils.InferenceResponse(
                 output_tensors=[out_tensor_0]
             )
             responses.append(inference_response)
-            t5 = time.perf_counter()
-            self.response_time += (t5 - t4)
-
-        end_total = time.perf_counter()
-        self.total_time += (end_total - start_total)
-        self.request_count += len(requests)
-
-        # Log performance stats every 5 seconds
-        current_time = time.time()
-        if current_time - self.last_log_time >= 5.0:
-            if self.request_count > 0:
-                avg_total = (self.total_time / self.request_count) * 1000
-                avg_inference = (self.inference_time / self.request_count) * 1000
-                avg_data_prep = (self.data_prep_time / self.request_count) * 1000
-                avg_response = (self.response_time / self.request_count) * 1000
-                
-                pb_utils.Logger.log_info(
-                    f"[{self.inst_name}] Performance Stats (ms/request): "
-                    f"Total={avg_total:.2f}, Inference={avg_inference:.2f}, "
-                    f"DataPrep={avg_data_prep:.2f}, Response={avg_response:.2f}, "
-                    f"Requests={self.request_count}, RPS={self.request_count/5.0:.1f}"
-                )
-                
-                # Reset counters
-                self.request_count = 0
-                self.total_time = 0
-                self.inference_time = 0
-                self.data_prep_time = 0
-                self.response_time = 0
-                self.last_log_time = current_time
 
         return responses

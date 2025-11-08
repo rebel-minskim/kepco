@@ -4,8 +4,8 @@ backend: "python"
 input [
   {
     name: "IMAGE_BYTES"
-    data_type: TYPE_UINT8
-    dims: [ -1 ]
+    data_type: TYPE_STRING
+    dims: [ 1 ]
   }
 ]
 
@@ -13,13 +13,12 @@ output [
   {
     name: "PREPROCESSED_IMAGE"
     data_type: TYPE_FP32
-    dims: [ 3, 800, 800 ]
+    dims: [ 3, 640, 640 ]
   }
 ]
 
 instance_group: [
-  { kind: KIND_CPU, count: 2 }
+  { kind: KIND_CPU, count: 8 }
 ]
 
 max_batch_size: 1
-

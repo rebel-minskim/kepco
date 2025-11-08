@@ -27,7 +27,10 @@
 import numpy as np
 import cv2
 import triton_python_backend_utils as pb_utils
+import base64
 
+RESIZE_WIDTH = 640
+RESIZE_HEIGHT = 640
 
 class TritonPythonModel:
     def initialize(self, args):
@@ -66,47 +69,54 @@ class TritonPythonModel:
         responses = []
 
         for request in requests:
-            try:
-                # Get JPEG bytes from input
-                image_bytes_tensor = pb_utils.get_input_tensor_by_name(request, "IMAGE_BYTES")
-                image_bytes = image_bytes_tensor.as_numpy()
+            #try:
+            # Get JPEG bytes from input
+            image_bytes_tensor = pb_utils.get_input_tensor_by_name(request, "IMAGE_BYTES")
+            image_bytes = image_bytes_tensor.as_numpy()
+
+
+            image_bytes = image_bytes[0]
+            image_bytes = image_bytes[0].decode('utf-8')
+            #print(image_bytes)
+            image_bytes = base64.b64decode(image_bytes, validate=True)
+            #with open("sdf.jpg","wb") as f:
+            #    f.write(image_bytes)
+            # Decode JPEG
+            # image_bytes is 1D array of uint8, need to decode it
+            image_array = np.frombuffer(image_bytes, dtype=np.uint8)
+            image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            
+            if image is None:
+               error = pb_utils.TritonError("Failed to decode JPEG image")
+               responses.append(pb_utils.InferenceResponse(error=error))
+               continue
                 
-                # Decode JPEG
-                # image_bytes is 1D array of uint8, need to decode it
-                image_array = np.frombuffer(image_bytes.tobytes(), dtype=np.uint8)
-                image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-                
-                if image is None:
-                    error = pb_utils.TritonError("Failed to decode JPEG image")
-                    responses.append(pb_utils.InferenceResponse(error=error))
-                    continue
-                
-                # Simple resize to 800x800 (no letterbox)
+                # Simple resize to RESIZE_WIDTHxRESIZE_HEIGHT (no letterbox)
                 # Box coordinates will be scaled proportionally by client
-                image = cv2.resize(image, (800, 800), interpolation=cv2.INTER_LINEAR)
+            image = cv2.resize(image, (RESIZE_WIDTH, RESIZE_HEIGHT), interpolation=cv2.INTER_LINEAR)
                 
                 # Convert BGR to RGB
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 
                 # Normalize to [0, 1] and convert to float32
-                image = image.astype(np.float32) / 255.0
+            image = image.astype(np.float32) / 255.0
                 
                 # Transpose from HWC to CHW format
-                image = np.transpose(image, (2, 0, 1))
+            image = np.transpose(image, (2, 0, 1))
                 
                 # Add batch dimension for RBLN runtime: (3, 800, 800) -> (1, 3, 800, 800)
-                image = np.expand_dims(image, axis=0)
+            image = np.expand_dims(image, axis=0)
                 
                 # Create output tensor
-                out_tensor = pb_utils.Tensor("PREPROCESSED_IMAGE", image)
+            out_tensor = pb_utils.Tensor("PREPROCESSED_IMAGE", image)
                 
                 # Create response
-                inference_response = pb_utils.InferenceResponse(output_tensors=[out_tensor])
-                responses.append(inference_response)
+            inference_response = pb_utils.InferenceResponse(output_tensors=[out_tensor])
+            responses.append(inference_response)
                 
-            except Exception as e:
-                error = pb_utils.TritonError(f"Preprocessing error: {str(e)}")
-                responses.append(pb_utils.InferenceResponse(error=error))
+            #except Exception as e:
+            #    error = pb_utils.TritonError(f"Preprocessing error: {str(e)}")
+            #    responses.append(pb_utils.InferenceResponse(error=error))
 
         return responses
 
