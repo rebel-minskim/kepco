@@ -66,8 +66,9 @@ python3 app_web.py
 ```bash
 cd triton
 
-# Start server (NPU backend)
-tritonserver --model-repository=./rbln_backend
+# Start server using startup script (recommended)
+./start_all.sh
+# Or start in background: ./start_simple.sh
 
 # Run client (in another terminal)
 cd client
@@ -121,13 +122,19 @@ kepco/
 │
 └── triton/                   # Triton Inference Server
     ├── README.md             # Triton docs
+    ├── requirements.txt      # Python dependencies
+    ├── start_all.sh          # Start server (foreground)
+    ├── start_simple.sh       # Start server (background)
+    ├── stop.sh               # Stop server
+    ├── .env.example          # Environment variables template
     ├── client/
     │   ├── client.py         # Python gRPC client
     │   └── media/            # Test media files
-    ├── gpu_backend/          # GPU (PyTorch) models
-    ├── rbln_backend/         # NPU (RBLN) models
-    ├── docs/                 # Technical docs
-    └── models/               # Model storage
+    ├── gpu_backend/          # GPU (PyTorch) backend
+    │   └── yolov11/         # YOLOv11 model
+    ├── rbln_backend/         # NPU (RBLN) backend
+    │   └── yolov11/         # YOLOv11 model
+    └── perf_data/            # Performance test data
 ```
 
 ## Documentation
@@ -147,8 +154,8 @@ Detailed documentation for each component:
 | **Dashboard (Web)** | GPU | 24 | 325W | 0.074 FPS/W | - |
 | **Live Demo** | NPU | 20-25 | ~50W | ~0.45 FPS/W | <20ms |
 | **Live Demo** | GPU | 15-30 | ~250W | ~0.08 FPS/W | 50-100ms |
-| **Triton (Single)** | NPU | 35-40 | ~50W | ~0.75 FPS/W | 10-15ms |
-| **Triton (Concurrent)** | NPU | 150+ | ~50W | ~3.0 FPS/W | 25-30ms |
+| **Triton (Async)** | NPU | 30-35 | ~50W | ~0.65 FPS/W | 10-15ms |
+| **Triton (Sync)** | GPU | 25-28 | ~250W | ~0.11 FPS/W | 50-100ms |
 
 ## Use Cases
 
@@ -194,11 +201,19 @@ lsof -ti:8000 | xargs kill -9  # Kill Triton HTTP
 
 **Triton server issues?**
 ```bash
+cd triton
+
 # Check server status
 curl localhost:8000/v2/health/ready
 
-# View server logs
-tritonserver --log-verbose=1 ...
+# Stop server
+./stop.sh
+
+# Start server (foreground to see logs)
+./start_all.sh
+
+# Or start in background
+./start_simple.sh
 ```
 
 **More help?** See detailed docs in each application folder.
@@ -213,10 +228,10 @@ tritonserver --log-verbose=1 ...
 3. Test with both `app.py` and `app_web.py`
 
 **For Triton:**
-1. Add model to `triton/gpu_backend/` or `triton/rbln_backend/`
-2. Configure `config.pbtxt`
-3. Restart Triton server
-4. Test with `perf_analyzer`
+1. Add model to `triton/gpu_backend/yolov11/` or `triton/rbln_backend/yolov11/`
+2. Configure `config.pbtxt` in the model directory
+3. Restart Triton server (use `./stop.sh` then `./start_all.sh`)
+4. Test with `perf_analyzer` or `client.py`
 
 ### Running Tests
 
@@ -228,7 +243,16 @@ python3 utils/diagnose_camera.py
 
 # Test Triton performance
 cd triton
-perf_analyzer -m yolov11 -u localhost:8000 --shape IMAGE:3,800,800
+# Using perf_analyzer (for GPU backend with shape input)
+perf_analyzer -m yolov11 -u localhost:8001 -i grpc --streaming --async \
+    --input-data perf_data/perf_input.json
+
+# Or using client.py
+cd client
+python client.py infer_video \
+    --video_path media/test_video_HD.mp4 \
+    --async_mode true \
+    --verbose
 ```
 
 ## License
