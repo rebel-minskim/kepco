@@ -13,12 +13,10 @@ This project provides a complete Triton Inference Server integration for YOLO11 
 - **Multi-video Processing**: Concurrent processing of multiple video streams
 - **Performance Benchmarking**: Built-in performance analysis tools
 
-> **Note**: C++ and Python clients (`client/cpp_client` and `client/python_client`) are only available in the `jpeg-byte` branch. Switch to the `jpeg-byte` branch to access these client implementations.
-
 ## Features
 
 - **Dual Backend Support**: Switch between GPU (PyTorch) and NPU (RBLN) backends
-- **High Performance**: Up to 89.8 FPS with C++ client, 30-35 FPS with Python client
+- **High Performance**: Optimized inference with async streaming support
 - **Multiple Protocols**: Support for both gRPC and HTTP protocols
 - **Concurrent Processing**: Multi-threaded pipeline for parallel video processing
 - **Decoupled Mode**: Async streaming inference for improved throughput
@@ -35,14 +33,7 @@ This project provides a complete Triton Inference Server integration for YOLO11 
   - **rebel-compiler SDK** >= 0.9.2.post1
   - Contact Rebellions for SDK access and installation
 
-### C++ Client (jpeg-byte branch only)
-- **CMake** 3.15+
-- **C++17** compiler
-- **Triton Client Libraries**
-- **OpenCV** 4.x
-- **gRPC** and **Protocol Buffers**
-
-### Python Client (jpeg-byte branch only)
+### Python Client
 - **Python** 3.8+
 - **tritonclient[grpc,http]** >= 2.30.0
 - **opencv-python** >= 4.5.0
@@ -59,7 +50,7 @@ This project provides a complete Triton Inference Server integration for YOLO11 
 
 # For NPU backend, install Rebellions RBLN Runtime SDK
 # Contact Rebellions for SDK access and installation instructions
-# Required: rebel-compiler >= 0.8.3
+# Required: rebel-compiler >= 0.9.2.post1
 ```
 
 ### Installation
@@ -68,23 +59,12 @@ This project provides a complete Triton Inference Server integration for YOLO11 
 git clone [repo-url]
 cd kepco/triton
 
-# For C++ and Python clients, switch to jpeg-byte branch
-git checkout jpeg-byte
-
 # Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
 # Install Python dependencies
 pip install -r requirements.txt
-
-# For client dependencies (jpeg-byte branch only)
-# pip install -r client/python_client/requirements.txt
-
-# Build C++ client (jpeg-byte branch only, optional)
-cd client/cpp_client
-./build.sh
-cd ../..
 ```
 
 ### Startup
@@ -119,34 +99,23 @@ tritonserver --model-repository=./gpu_backend \
 
 ### Run Client
 
-**Python Client:**
+**Python Client (`client.py`):**
 
 ```bash
-cd client/python_client
+cd client
 
 # Process video file
-python main.py video ../media/test_video_HD.mp4 -o output.mp4
+python client.py infer_video \
+    --video_path media/test_video_HD.mp4 \
+    --output_path output.mp4 \
+    --async_mode true \
+    --save_output
 
 # Process image
-python main.py image path/to/image.jpg -o output.jpg
+python client.py infer_image --image_path image.jpg
 
 # Health check
-python main.py health_check --url localhost:8001
-```
-
-**C++ Client:**
-
-```bash
-cd client/cpp_client
-
-# Build (if not already built)
-./build.sh
-
-# Process single video
-./bin/triton_client video input.mp4 output.mp4
-
-# Process multiple videos concurrently
-./bin/triton_client parallel video1.mp4 output1.mp4 8
+python client.py health_check --url localhost:8001
 ```
 
 ## Architecture
@@ -175,11 +144,11 @@ cd client/cpp_client
     └────┬────┘                      └────┬────┘
          │                                  │
     ┌────┴──────────────────────────────────┴────┐
-    │            Client Applications              │
-    │  ┌──────────────┐    ┌──────────────┐      │
-    │  │ C++ Client   │    │Python Client │      │
-    │  │ (89.8 FPS)   │    │ (30-35 FPS)  │      │
-    │  └──────────────┘    └──────────────┘      │
+    │            Client Application                │
+    │  ┌────────────────────────────────────┐    │
+    │  │      Python Client (client.py)     │    │
+    │  │    Async streaming, decoupled     │    │
+    │  └────────────────────────────────────┘    │
     └─────────────────────────────────────────────┘
 ```
 
@@ -188,23 +157,8 @@ cd client/cpp_client
 ```
 triton/
 ├── client/
-│   ├── cpp_client/              # C++ gRPC/HTTP client (jpeg-byte branch only)
-│   │   ├── main.cpp            # Client entry point
-│   │   ├── triton_client.cpp   # Triton client implementation
-│   │   ├── grpc_client.cpp     # gRPC wrapper
-│   │   ├── yolo_preprocess.cpp # YOLO preprocessing
-│   │   ├── yolo_postprocess.cpp# YOLO postprocessing
-│   │   ├── build.sh            # Build script
-│   │   └── README.md           # C++ client docs
-│   │
-│   ├── python_client/           # Python client (jpeg-byte branch only)
-│   │   ├── main.py             # Basic client
-│   │   ├── main_concurrent.py  # Concurrent inference
-│   │   ├── config.py           # Configuration
-│   │   ├── utils/              # Utility modules
-│   │   └── README.md           # Python client docs
-│   │
-│   └── client.py               # Legacy client
+│   ├── client.py               # Python gRPC client
+│   └── media/                  # Test media files
 │
 ├── gpu_backend/                 # GPU (PyTorch) backend
 │   └── yolov11/
@@ -231,51 +185,46 @@ triton/
 
 ## Usage
 
-> **Note**: The following client examples are only available in the `jpeg-byte` branch. Switch to that branch first: `git checkout jpeg-byte`
-
 ### Basic Video Processing
 
 ```bash
-# Switch to jpeg-byte branch for client access
-git checkout jpeg-byte
+cd client
 
-# Python client - single video
-cd client/python_client
-python main.py video ../media/test_video_HD.mp4 -o output.mp4
-
-# Python client - async mode (faster)
+# Video inference with async mode (recommended)
 python client.py infer_video \
-    --video_path ../media/test_video_HD.mp4 \
+    --video_path media/test_video_HD.mp4 \
     --output_path output.mp4 \
     --async_mode true \
-    --max_async_requests 16
+    --max_async_requests 16 \
+    --save_output
 
-# C++ client - single video
-cd client/cpp_client
-./bin/triton_client video input.mp4 output.mp4
-
-# C++ client - parallel processing
-./bin/triton_client parallel video1.mp4 output1.mp4 8
+# Webcam input
+python client.py infer_video \
+    --video_path 0 \
+    --async_mode true
 ```
 
 ### Image Processing
 
 ```bash
-# Python client (jpeg-byte branch only)
-python main.py image path/to/image.jpg -o output.jpg
+cd client
 
-# Or using client.py
+# Single image inference
 python client.py infer_image --image_path image.jpg
+
+# Custom server URL
+python client.py infer_image \
+    --image_path image.jpg \
+    --url localhost:8001
 ```
 
 ### Health Check
 
 ```bash
+cd client
+
 # Check server status
 python client.py health_check --url localhost:8001
-
-# Or using Python client
-python main.py health_check --url localhost:8001
 ```
 
 ### Performance Benchmarking
@@ -395,13 +344,6 @@ python client.py health_check --url localhost:8001
 - Lower `--jpeg_quality` (e.g., 70) for faster encoding at slight quality loss
 - Use `--save_output false` when only testing (saves disk I/O)
 
-#### C++ Client Performance Test
-
-```bash
-# C++ client performance test
-cd client/cpp_client
-./bin/triton_client dummy --requests 900 --rate 90
-```
 
 ## Configuration
 
@@ -420,10 +362,10 @@ The project requires the following Python packages (see `requirements.txt`):
 - `triton-python-backend` >= 2.0.0
 
 **Rebellions RBLN Runtime (NPU Backend):**
-- `rebel-compiler` >= 0.8.3
+- `rebel-compiler` >= 0.9.2.post1
   - Note: This SDK is provided by Rebellions. Contact Rebellions for access and installation instructions.
 
-**Client Dependencies (jpeg-byte branch only):**
+**Client Dependencies:**
 - `tritonclient[grpc,http]` >= 2.30.0
 
 Install all dependencies:
@@ -469,32 +411,16 @@ See `.env.example` for all available options.
 
 ## Performance
 
-> **Note**: Client performance metrics below are for the `jpeg-byte` branch only.
+### Video Processing Performance
 
-### Single Video Processing
-
-| Client | GPU Backend | NPU Backend |
-|--------|------------|-------------|
-| **C++ Client** (jpeg-byte) | ~30 FPS | ~35-40 FPS |
-| **Python Client** (jpeg-byte) | ~25-28 FPS | ~30-35 FPS |
-
-### Multi-Video Concurrent Processing
-
-- **2 Videos**: ~1.8x throughput improvement
-- **4 Videos**: ~3.2x throughput improvement
-- **8 Videos**: ~4.5x throughput improvement
-
-### C++ Client Performance
-
-- **Peak Performance**: 89.8 FPS
-- **Average Inference Time**: 28.6ms
-- **End-to-End Latency**: 35.2ms
-- **Throughput**: 90 req/s
+- **Async Mode**: 30-35 FPS (NPU backend)
+- **Sync Mode**: 25-28 FPS (GPU backend)
+- **Throughput Improvement**: 2-3x with async mode
+- **Latency**: 10-15ms (NPU backend), 50-100ms (GPU backend)
 
 ## Documentation
 
-- **C++ Client** (jpeg-byte branch): [client/cpp_client/README.md](client/cpp_client/README.md)
-- **Python Client** (jpeg-byte branch): [client/python_client/README.md](client/python_client/README.md)
+- **Python Client**: See `client/client.py` for usage examples and command-line options
 
 ## Troubleshooting
 

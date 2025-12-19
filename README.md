@@ -28,7 +28,7 @@ Real-time YOLO-based detection system for industrial safety monitoring with 9 de
 Production-ready YOLO11 inference with NVIDIA Triton Server, supporting both GPU and NPU backends.
 
 **Features:**
-- C++ and Python clients
+- Python client with async streaming support
 - gRPC and HTTP protocols
 - Multi-video concurrent processing
 - Performance benchmarking tools
@@ -70,9 +70,12 @@ cd triton
 tritonserver --model-repository=./rbln_backend
 
 # Run client (in another terminal)
-cd client/cpp_client
-./build.sh
-./bin/triton_client parallel video.mp4 output.mp4 8
+cd client
+python client.py infer_video \
+    --video_path media/test_video_HD.mp4 \
+    --output_path output.mp4 \
+    --async_mode true \
+    --save_output
 ```
 
 ## System Requirements
@@ -82,6 +85,9 @@ cd client/cpp_client
 - **Python**: 3.8+
 - **Camera**: USB webcam (for detection system)
 - **Triton**: NVIDIA Triton Inference Server 2.x+ (for triton deployment)
+- **Rebellions SDK**: rebel-compiler >= 0.9.2.post1
+  - Required for NPU backend in Triton and live-demo applications
+  - Contact Rebellions for SDK access and installation instructions
 
 ## Project Structure
 
@@ -116,8 +122,8 @@ kepco/
 └── triton/                   # Triton Inference Server
     ├── README.md             # Triton docs
     ├── client/
-    │   ├── cpp_client/       # C++ client
-    │   └── python_client/    # Python client
+    │   ├── client.py         # Python gRPC client
+    │   └── media/            # Test media files
     ├── gpu_backend/          # GPU (PyTorch) models
     ├── rbln_backend/         # NPU (RBLN) models
     ├── docs/                 # Technical docs
