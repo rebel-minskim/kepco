@@ -1,0 +1,20 @@
+# Core dependencies
+numpy>=1.21.0
+opencv-python>=4.5.0
+torch>=1.9.0
+ultralytics>=8.0.0
+
+# Triton Python Backend
+triton-python-backend>=2.0.0
+
+# Rebellions RBLN Runtime (NPU Backend)
+# Note: rebel-compiler SDK is provided by Rebellions
+# Install from Rebellions SDK package or contact Rebellions for access
+rebel-compiler>=0.9.2.post1
+
+# Utilities
+pyyaml>=6.0
+
+# Client dependencies (for jpeg-byte branch)
+tritonclient[grpc,http]>=2.30.0
+

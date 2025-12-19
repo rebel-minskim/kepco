@@ -31,7 +31,9 @@ This project provides a complete Triton Inference Server integration for YOLO11 
 - **NVIDIA Triton Inference Server** 2.x+
 - **Python** 3.8+
 - **PyTorch** 1.9+ (GPU backend)
-- **Rebellions SDK** (NPU backend)
+- **Rebellions RBLN Runtime** (NPU backend)
+  - **rebel-compiler SDK** >= 0.9.2.post1
+  - Contact Rebellions for SDK access and installation
 
 ### C++ Client (jpeg-byte branch only)
 - **CMake** 3.15+
@@ -55,8 +57,9 @@ This project provides a complete Triton Inference Server integration for YOLO11 
 # Install NVIDIA Triton Inference Server
 # Follow instructions at: https://github.com/triton-inference-server/server
 
-# For NPU backend, install Rebellions SDK
-# Contact Rebellions for SDK access
+# For NPU backend, install Rebellions RBLN Runtime SDK
+# Contact Rebellions for SDK access and installation instructions
+# Required: rebel-compiler >= 0.8.3
 ```
 
 ### Installation
@@ -72,8 +75,11 @@ git checkout jpeg-byte
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install Python dependencies (jpeg-byte branch only)
-pip install -r client/python_client/requirements.txt
+# Install Python dependencies
+pip install -r requirements.txt
+
+# For client dependencies (jpeg-byte branch only)
+# pip install -r client/python_client/requirements.txt
 
 # Build C++ client (jpeg-byte branch only, optional)
 cd client/cpp_client
@@ -398,6 +404,32 @@ cd client/cpp_client
 ```
 
 ## Configuration
+
+### Python Dependencies
+
+The project requires the following Python packages (see `requirements.txt`):
+
+**Core Dependencies:**
+- `numpy` >= 1.21.0
+- `opencv-python` >= 4.5.0
+- `torch` >= 1.9.0
+- `ultralytics` >= 8.0.0
+- `pyyaml` >= 6.0
+
+**Triton Backend:**
+- `triton-python-backend` >= 2.0.0
+
+**Rebellions RBLN Runtime (NPU Backend):**
+- `rebel-compiler` >= 0.8.3
+  - Note: This SDK is provided by Rebellions. Contact Rebellions for access and installation instructions.
+
+**Client Dependencies (jpeg-byte branch only):**
+- `tritonclient[grpc,http]` >= 2.30.0
+
+Install all dependencies:
+```bash
+pip install -r requirements.txt
+```
 
 ### Environment Variables
 
