@@ -1,37 +1,204 @@
-# Triton Inference Server Integration
+# Kepco Triton Inference Server
 
-YOLO11 object detection with NVIDIA Triton Inference Server, supporting both GPU and NPU backends.
+Production-ready YOLO11 object detection with NVIDIA Triton Inference Server, supporting both GPU and NPU (Rebellions RBLN) backends.
+
+![Status](https://img.shields.io/badge/Status-Active-green) ![Platform](https://img.shields.io/badge/Platform-Triton%20Server-blue) ![Backend](https://img.shields.io/badge/Backend-GPU%20%7C%20NPU-orange)
 
 ## Overview
 
-This project provides Triton Inference Server integration for YOLO11 with:
-- **GPU Backend**: PyTorch-based inference
-- **NPU Backend**: Rebellions RBLN-optimized inference
-- **C++ Client**: High-performance gRPC and HTTP client
-- **Python Client**: Easy-to-use Python interface
+This project provides a complete Triton Inference Server integration for YOLO11 object detection, featuring:
 
-## Directory Structure
+- **GPU Backend**: PyTorch-based inference with CUDA optimization
+- **NPU Backend**: Rebellions RBLN-optimized inference for high efficiency
+- **Multi-video Processing**: Concurrent processing of multiple video streams
+- **Performance Benchmarking**: Built-in performance analysis tools
+
+> **Note**: C++ and Python clients (`client/cpp_client` and `client/python_client`) are only available in the `jpeg-byte` branch. Switch to the `jpeg-byte` branch to access these client implementations.
+
+## Features
+
+- **Dual Backend Support**: Switch between GPU (PyTorch) and NPU (RBLN) backends
+- **High Performance**: Up to 89.8 FPS with C++ client, 30-35 FPS with Python client
+- **Multiple Protocols**: Support for both gRPC and HTTP protocols
+- **Concurrent Processing**: Multi-threaded pipeline for parallel video processing
+- **Decoupled Mode**: Async streaming inference for improved throughput
+- **Production Ready**: Comprehensive error handling, logging, and monitoring
+- **Easy Integration**: Simple client APIs for quick deployment
+
+## Tech Stack
+
+### Server
+- **NVIDIA Triton Inference Server** 2.x+
+- **Python** 3.8+
+- **PyTorch** 1.9+ (GPU backend)
+- **Rebellions SDK** (NPU backend)
+
+### C++ Client (jpeg-byte branch only)
+- **CMake** 3.15+
+- **C++17** compiler
+- **Triton Client Libraries**
+- **OpenCV** 4.x
+- **gRPC** and **Protocol Buffers**
+
+### Python Client (jpeg-byte branch only)
+- **Python** 3.8+
+- **tritonclient[grpc,http]** >= 2.30.0
+- **opencv-python** >= 4.5.0
+- **numpy** >= 1.21.0
+- **PyYAML** >= 6.0
+
+## Quick Start
+
+### Prerequisites
+
+```bash
+# Install NVIDIA Triton Inference Server
+# Follow instructions at: https://github.com/triton-inference-server/server
+
+# For NPU backend, install Rebellions SDK
+# Contact Rebellions for SDK access
+```
+
+### Installation
+
+```bash
+git clone [repo-url]
+cd kepco/triton
+
+# For C++ and Python clients, switch to jpeg-byte branch
+git checkout jpeg-byte
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install Python dependencies (jpeg-byte branch only)
+pip install -r client/python_client/requirements.txt
+
+# Build C++ client (jpeg-byte branch only, optional)
+cd client/cpp_client
+./build.sh
+cd ../..
+```
+
+### Startup
+
+**Option 1: Using startup scripts (recommended)**
+
+```bash
+# Start all services (foreground)
+./start_all.sh
+
+# Or start in background
+./start_simple.sh
+```
+
+**Option 2: Manual startup**
+
+```bash
+# Start Triton Server with NPU backend
+tritonserver --model-repository=./rbln_backend \
+             --log-verbose=1 \
+             --http-port=8000 \
+             --grpc-port=8001 \
+             --metrics-port=8002
+
+# Or with GPU backend
+tritonserver --model-repository=./gpu_backend \
+             --log-verbose=1 \
+             --http-port=8000 \
+             --grpc-port=8001 \
+             --metrics-port=8002
+```
+
+### Run Client
+
+**Python Client:**
+
+```bash
+cd client/python_client
+
+# Process video file
+python main.py video ../media/test_video_HD.mp4 -o output.mp4
+
+# Process image
+python main.py image path/to/image.jpg -o output.jpg
+
+# Health check
+python main.py health_check --url localhost:8001
+```
+
+**C++ Client:**
+
+```bash
+cd client/cpp_client
+
+# Build (if not already built)
+./build.sh
+
+# Process single video
+./bin/triton_client video input.mp4 output.mp4
+
+# Process multiple videos concurrently
+./bin/triton_client parallel video1.mp4 output1.mp4 8
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Triton Inference Server                  │
+│  ┌──────────────────┐         ┌──────────────────┐         │
+│  │   GPU Backend    │         │   NPU Backend    │         │
+│  │  (PyTorch/YOLO)  │         │  (RBLN/YOLO)     │         │
+│  └──────────────────┘         └──────────────────┘         │
+│           │                            │                    │
+│           └────────────┬───────────────┘                    │
+│                        │                                    │
+│              ┌─────────▼─────────┐                         │
+│              │  Model Repository │                         │
+│              │   (yolov11)      │                         │
+│              └─────────┬─────────┘                         │
+└─────────────────────────┼───────────────────────────────────┘
+                          │
+         ┌────────────────┴────────────────┐
+         │                                  │
+    ┌────▼────┐                      ┌────▼────┐
+    │  gRPC   │                      │  HTTP   │
+    │  :8001  │                      │  :8000  │
+    └────┬────┘                      └────┬────┘
+         │                                  │
+    ┌────┴──────────────────────────────────┴────┐
+    │            Client Applications              │
+    │  ┌──────────────┐    ┌──────────────┐      │
+    │  │ C++ Client   │    │Python Client │      │
+    │  │ (89.8 FPS)   │    │ (30-35 FPS)  │      │
+    │  └──────────────┘    └──────────────┘      │
+    └─────────────────────────────────────────────┘
+```
+
+### Directory Structure
 
 ```
 triton/
 ├── client/
-│   ├── cpp_client/              # C++ gRPC/HTTP client
+│   ├── cpp_client/              # C++ gRPC/HTTP client (jpeg-byte branch only)
 │   │   ├── main.cpp            # Client entry point
 │   │   ├── triton_client.cpp   # Triton client implementation
 │   │   ├── grpc_client.cpp     # gRPC wrapper
 │   │   ├── yolo_preprocess.cpp # YOLO preprocessing
 │   │   ├── yolo_postprocess.cpp# YOLO postprocessing
 │   │   ├── build.sh            # Build script
-│   │   ├── test_multi_video.sh # Multi-video test
 │   │   └── README.md           # C++ client docs
 │   │
-│   └── python_client/           # Python client
-│       ├── main.py             # Basic client
-│       ├── main_concurrent.py  # Concurrent inference
-│       ├── main_concurrent_simple.py  # Simplified concurrent
-│       ├── config.py           # Configuration
-│       ├── utils/              # Utility modules
-│       └── README.md           # Python client docs
+│   ├── python_client/           # Python client (jpeg-byte branch only)
+│   │   ├── main.py             # Basic client
+│   │   ├── main_concurrent.py  # Concurrent inference
+│   │   ├── config.py           # Configuration
+│   │   ├── utils/              # Utility modules
+│   │   └── README.md           # Python client docs
+│   │
+│   └── client.py               # Legacy client
 │
 ├── gpu_backend/                 # GPU (PyTorch) backend
 │   └── yolov11/
@@ -45,209 +212,316 @@ triton/
 │       ├── config.pbtxt        # Triton config
 │       └── 1/
 │           ├── model.py        # RBLN model wrapper
-│           └── yolov11.rbln    # RBLN compiled model
+│           ├── yolov11.rbln    # RBLN compiled model
+│           └── coco128.yaml   # Class names
 │
-├── docs/                        # Documentation
-│   ├── ARCHITECTURE.md         # System architecture
-│   ├── PERFORMANCE.md          # Performance benchmarks
-│   └── README_MULTI_VIDEO.md   # Multi-video guide
-│
-├── models/                      # Model storage
-│   ├── gpu/                    # GPU models
-│   └── rbln/                   # RBLN models
-│
+├── start_all.sh                 # Start all services
+├── start_simple.sh              # Start in background
+├── stop.sh                      # Stop all services
+├── .env.example                 # Environment variables template
 ├── .gitignore
 └── README.md                    # This file
 ```
 
-## Quick Start
+## Usage
 
-### 1. Start Triton Server
+> **Note**: The following client examples are only available in the `jpeg-byte` branch. Switch to that branch first: `git checkout jpeg-byte`
 
-**GPU Backend:**
+### Basic Video Processing
+
 ```bash
-tritonserver --model-repository=./gpu_backend
-```
+# Switch to jpeg-byte branch for client access
+git checkout jpeg-byte
 
-**NPU Backend:**
-```bash
-tritonserver --model-repository=./rbln_backend
-```
-
-### 2. Run Client
-
-**C++ Client:**
-```bash
-cd client/cpp_client
-./build.sh
-./bin/triton_client parallel video.mp4 output.mp4 8
-```
-
-**Python Client:**
-```bash
+# Python client - single video
 cd client/python_client
-pip install -r requirements.txt
-python main.py --video video.mp4 --output output.mp4
+python main.py video ../media/test_video_HD.mp4 -o output.mp4
+
+# Python client - async mode (faster)
+python client.py infer_video \
+    --video_path ../media/test_video_HD.mp4 \
+    --output_path output.mp4 \
+    --async_mode true \
+    --max_async_requests 16
+
+# C++ client - single video
+cd client/cpp_client
+./bin/triton_client video input.mp4 output.mp4
+
+# C++ client - parallel processing
+./bin/triton_client parallel video1.mp4 output1.mp4 8
 ```
+
+### Image Processing
+
+```bash
+# Python client (jpeg-byte branch only)
+python main.py image path/to/image.jpg -o output.jpg
+
+# Or using client.py
+python client.py infer_image --image_path image.jpg
+```
+
+### Health Check
+
+```bash
+# Check server status
+python client.py health_check --url localhost:8001
+
+# Or using Python client
+python main.py health_check --url localhost:8001
+```
+
+### Performance Benchmarking
+
+#### Using perf_analyzer
+
+`perf_analyzer` is Triton's official performance testing tool. It provides detailed latency and throughput metrics.
+
+**gRPC Streaming with Real Data:**
+```bash
+# gRPC endpoint with streaming, async mode, and custom input data
+perf_analyzer -m yolov11 \
+  -u 10.244.48.166:8001 \
+  -i grpc \
+  --streaming \
+  --async \
+  --input-data ../perf_data/perf_input.json \
+  --measurement-interval 10000 \
+  --concurrency-range 64
+```
+
+**Key Options:**
+- `-m`: Model name
+- `-u`: Server URL (format: `host:port`)
+- `-i`: Protocol (`grpc` or `http`)
+- `--streaming`: Enable streaming mode (for decoupled models)
+- `--async`: Use async mode
+- `--input-data`: Path to JSON file containing input data
+- `--measurement-interval`: Measurement duration in milliseconds
+- `--concurrency-range`: Concurrency range (format: `start:end:step` or single value)
+- `-f`: Output CSV file path
+
+**Input Data Format:**
+The `perf_input.json` file should contain base64-encoded JPEG images:
+```json
+{
+  "data": [{
+    "INPUT__0": {
+      "b64": "/9j/4AAQSkZJRg...",
+      "shape": [74852]
+    }
+  }]
+}
+```
+
+#### Using client.py
+
+The `client.py` script provides a Python interface for video and image inference.
+
+**Video Inference:**
+```bash
+# Synchronous mode (default, for non-decoupled models only)
+python client.py infer_video \
+    --video_path video.mp4 \
+    --output_path output.mp4 \
+    --save_output
+
+# Asynchronous/streaming mode (faster, recommended, required for decoupled models)
+python client.py infer_video \
+    --video_path video.mp4 \
+    --output_path output.mp4 \
+    --async_mode true \
+    --max_async_requests 16 \
+    --save_output
+```
+
+> **Note**: If your model uses decoupled transaction policy (like the NPU backend), 
+> `client.py` will automatically enable async mode. Synchronous mode is not supported 
+> for decoupled models.
+
+# Webcam input
+python client.py infer_video \
+    --video_path 0 \
+    --async_mode true
+
+# Custom server URL
+python client.py infer_video \
+    --video_path video.mp4 \
+    --url 10.244.48.166:8001 \
+    --async_mode true
+```
+
+**Image Inference:**
+```bash
+# Single image (non-decoupled models only)
+python client.py infer_image \
+    --image_path image.jpg
+
+# Custom server URL
+python client.py infer_image \
+    --image_path image.jpg \
+    --url localhost:8001
+```
+
+> **Note**: Image inference is not supported for decoupled models. 
+> Use video inference with `--async_mode true` instead.
+
+**Health Check:**
+```bash
+# Check server status
+python client.py health_check --url localhost:8001
+```
+
+**Key Options:**
+- `--video_path`: Video file path or `0` for webcam
+- `--output_path`: Output video file path (optional)
+- `--url`: Triton server URL (default: `localhost:8001`)
+- `--async_mode`: Enable async/streaming mode (default: `false`)
+- `--max_async_requests`: Maximum concurrent async requests (default: `16`)
+- `--save_output`: Save output video (default: `false`)
+- `--jpeg_quality`: JPEG compression quality 1-100 (default: `80`)
+- `--verbose`: Enable verbose logging
+
+**Performance Tips:**
+- Use `--async_mode true` for better throughput (2-3x improvement)
+- Adjust `--max_async_requests` based on server capacity (typically 8-32)
+- Lower `--jpeg_quality` (e.g., 70) for faster encoding at slight quality loss
+- Use `--save_output false` when only testing (saves disk I/O)
+
+#### C++ Client Performance Test
+
+```bash
+# C++ client performance test
+cd client/cpp_client
+./bin/triton_client dummy --requests 900 --rate 90
+```
+
+## Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+Key environment variables:
+
+- `TRITON_SERVER_URL`: Triton server URL (default: `localhost:8001`)
+- `TRITON_HTTP_PORT`: HTTP port (default: `8000`)
+- `TRITON_GRPC_PORT`: gRPC port (default: `8001`)
+- `TRITON_METRICS_PORT`: Metrics port (default: `8002`)
+- `MODEL_REPOSITORY`: Model repository path (default: `./rbln_backend`)
+- `MODEL_NAME`: Model name (default: `yolov11`)
+- `BACKEND_TYPE`: Backend type - `gpu` or `rbln` (default: `rbln`)
+- `LOG_VERBOSE`: Enable verbose logging (default: `1`)
+- `CONFIDENCE_THRESHOLD`: Detection confidence threshold (default: `0.20`)
+- `IOU_THRESHOLD`: NMS IoU threshold (default: `0.50`)
+
+See `.env.example` for all available options.
+
+### Model Configuration
+
+**GPU Backend** (`gpu_backend/yolov11/config.pbtxt`):
+- Input: `[3, 800, 800]` FP32 tensor
+- Output: Multiple FP32 tensors
+- Instance group: 8 GPU instances
+
+**NPU Backend** (`rbln_backend/yolov11/config.pbtxt`):
+- Input: Variable-length UINT8 JPEG bytes
+- Output: JSON string with detections
+- Instance group: 2 model instances
+- Decoupled mode: Enabled
 
 ## Performance
 
+> **Note**: Client performance metrics below are for the `jpeg-byte` branch only.
+
 ### Single Video Processing
-- **C++ Client**: ~30 FPS (GPU), ~35-40 FPS (NPU)
-- **Python Client**: ~25-28 FPS (GPU), ~30-35 FPS (NPU)
+
+| Client | GPU Backend | NPU Backend |
+|--------|------------|-------------|
+| **C++ Client** (jpeg-byte) | ~30 FPS | ~35-40 FPS |
+| **Python Client** (jpeg-byte) | ~25-28 FPS | ~30-35 FPS |
 
 ### Multi-Video Concurrent Processing
+
 - **2 Videos**: ~1.8x throughput improvement
 - **4 Videos**: ~3.2x throughput improvement
+- **8 Videos**: ~4.5x throughput improvement
 
-See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for detailed benchmarks.
+### C++ Client Performance
 
-## Features
-
-### C++ Client
-- gRPC and HTTP support
-- Multi-threaded processing
-- Concurrent multi-video inference
-- Zero-copy where possible
-- Optimized preprocessing/postprocessing
-
-### Python Client
-- Simple and concurrent modes
-- Queue-based frame management
-- Async inference support
-- Video/image/webcam inputs
-- Easy integration
-
-### Backend Support
-- **GPU**: PyTorch with CUDA optimization
-- **NPU**: Rebellions RBLN with async runtime
-- Configurable batch sizes
-- Dynamic batching support
-
-## Performance Analysis
-
-### Using Triton Performance Analyzer
-
-Triton provides `perf_analyzer` tool for comprehensive performance benchmarking.
-
-**Basic Usage:**
-```bash
-perf_analyzer -m yolov11 \
-  -u localhost:8000 \
-  --shape IMAGE:3,800,800 \
-  --request-rate-range=100:200:10 \
-  --max-threads 32 \
-  --shared-memory system \
-  -f results.csv
-```
-
-**Parameters Explained:**
-- `-m yolov11`: Model name
-- `-u localhost:8000`: Triton server URL (HTTP)
-- `--shape IMAGE:3,800,800`: Input tensor shape (CHW format)
-- `--request-rate-range=100:200:10`: Test request rates from 100 to 200, step by 10
-- `--max-threads 32`: Maximum concurrent threads
-- `--shared-memory system`: Use system shared memory for faster data transfer
-- `-f results.csv`: Save results to CSV file
-
-**Additional Useful Options:**
-```bash
-# Test with concurrency levels instead of request rate
-perf_analyzer -m yolov11 \
-  -u localhost:8000 \
-  --shape IMAGE:3,800,800 \
-  --concurrency-range 1:16:1
-
-# Test with gRPC protocol
-perf_analyzer -m yolov11 \
-  -u localhost:8001 \
-  -i grpc \
-  --shape IMAGE:3,800,800 \
-  --concurrency-range 8
-
-# Measure latency percentiles
-perf_analyzer -m yolov11 \
-  -u localhost:8000 \
-  --shape IMAGE:3,800,800 \
-  --percentile=95 \
-  --percentile=99
-
-# Extended measurement period
-perf_analyzer -m yolov11 \
-  -u localhost:8000 \
-  --shape IMAGE:3,800,800 \
-  --measurement-interval 10000 \
-  --concurrency-range 8
-```
-
-**Analyzing Results:**
-
-The output provides:
-- **Throughput**: Inferences per second
-- **Latency**: Min, max, mean, and percentiles (p50, p90, p95, p99)
-- **Client/Server Overhead**: Time breakdown
-- **Concurrency**: Optimal concurrent request count
-
-**Example Output:**
-```
-Concurrency: 8
-  Request throughput: 152.4 infer/sec
-  Avg latency: 52.1 ms (overhead 0.3 ms + queue 1.2 ms + compute 50.6 ms)
-  p50 latency: 51.2 ms
-  p90 latency: 54.8 ms
-  p95 latency: 56.3 ms
-  p99 latency: 59.1 ms
-```
-
-**Best Practices:**
-1. Start with low concurrency and gradually increase
-2. Test both HTTP and gRPC protocols
-3. Use `--shared-memory` for better performance
-4. Run long measurement periods (10s+) for stable results
-5. Test different batch sizes if model supports batching
-6. Monitor server-side metrics with `nvidia-smi` or `rbln-stat`
-
-**Comparing GPU vs NPU:**
-```bash
-# Test GPU backend
-perf_analyzer -m yolov11 -u localhost:8000 --shape IMAGE:3,800,800 \
-  --concurrency-range 1:16:1 -f gpu_results.csv
-
-# Test NPU backend (different port/server)
-perf_analyzer -m yolov11 -u localhost:8100 --shape IMAGE:3,800,800 \
-  --concurrency-range 1:16:1 -f npu_results.csv
-
-# Compare results
-diff gpu_results.csv npu_results.csv
-```
-
-## Requirements
-
-### Server
-- NVIDIA Triton Inference Server 2.x+
-- CUDA 11.0+ (for GPU backend)
-- Rebellions SDK (for NPU backend)
-
-### C++ Client
-- CMake 3.15+
-- C++17 compiler
-- Triton client libraries
-- OpenCV 4.x
-- gRPC
-
-### Python Client
-- Python 3.8+
-- tritonclient
-- opencv-python
-- numpy
+- **Peak Performance**: 89.8 FPS
+- **Average Inference Time**: 28.6ms
+- **End-to-End Latency**: 35.2ms
+- **Throughput**: 90 req/s
 
 ## Documentation
 
-- **C++ Client**: [client/cpp_client/README.md](client/cpp_client/README.md)
-- **Python Client**: [client/python_client/README.md](client/python_client/README.md)
-- **Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- **Performance**: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
-- **Multi-Video**: [docs/README_MULTI_VIDEO.md](docs/README_MULTI_VIDEO.md)
+- **C++ Client** (jpeg-byte branch): [client/cpp_client/README.md](client/cpp_client/README.md)
+- **Python Client** (jpeg-byte branch): [client/python_client/README.md](client/python_client/README.md)
+
+## Troubleshooting
+
+### Server Not Starting
+
+```bash
+# Check if ports are available
+netstat -tuln | grep -E '8000|8001|8002'
+
+# Check Triton server logs
+tail -f /var/log/triton/server.log
+
+# Verify model repository
+tritonserver --model-repository=./rbln_backend --exit-on-error
+```
+
+### Client Connection Issues
+
+```bash
+# Test server connectivity
+python client.py health_check --url localhost:8001
+
+# Check firewall settings
+sudo ufw status
+
+# Verify gRPC endpoint
+grpc_health_probe -addr=localhost:8001
+```
+
+### Decoupled Model Errors
+
+If you see an error like:
+```
+[StatusCode.UNIMPLEMENTED] ModelInfer RPC doesn't support models with decoupled transaction policy
+```
+
+This means you're trying to use synchronous mode with a decoupled model. Solutions:
+
+1. **Use async mode** (recommended):
+   ```bash
+   python client.py infer_video --video_path video.mp4 --async_mode true
+   ```
+
+2. **client.py will auto-detect** and enable async mode automatically for decoupled models.
+
+3. **Note**: Image inference (`infer_image`) is not supported for decoupled models. Use video inference instead.
+
+### Performance Issues
+
+```bash
+# Monitor GPU usage
+nvidia-smi -l 1
+
+# Monitor NPU usage (if available)
+rbln-stat
+
+# Check system resources
+htop
+```
 
 ## License
 
@@ -256,4 +530,3 @@ Copyright © 2025 Rebellions Inc.
 ---
 
 **Triton + YOLO11 Integration for KEPCO PoC**
-

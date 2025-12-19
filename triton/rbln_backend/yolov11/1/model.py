@@ -27,150 +27,409 @@
 #
 # model.py
 #
+"""Triton Python Backend Model for YOLOv11 with RBLN Runtime.
+
+This module implements a pipelined inference model using Rebellions RBLN
+runtime for NPU acceleration. It supports decoupled mode for improved
+throughput.
+"""
+import base64
 import json
-import os
+import queue
 import re
-import time
+import threading
+from pathlib import Path
+from typing import Any, Union
+
+import cv2
+import numpy as np
 import rebel  # RBLN Runtime
 import triton_python_backend_utils as pb_utils
+import torch
+from ultralytics.data.augment import LetterBox
+from ultralytics.utils.nms import non_max_suppression
+from ultralytics.utils.ops import scale_boxes
 
-# Number of devices to allocate.
-# Available device numbers can be found through `rbln-stat` command.
+# Constants
 NAME_RE = re.compile(r"^(?P<model>.+)_(?P<group>\d+)_(?P<inst>\d+)$")
-NUM_OF_DEVICES = 4
+INPUT_SHAPE = (640, 640)
+
+def postprocess_to_json(
+    outputs: np.ndarray,
+    origin_shape: tuple[int, int, int],
+    class_names: list[str],
+    conf_thres: float = 0.25,
+    iou_thres: float = 0.45,
+    max_det: int = 300,
+) -> dict[str, Any]:
+    """Postprocess YOLOv11 outputs to JSON format using Ultralytics functions.
+
+    YOLOv11 output format: [1, 84, 8400] or [84, 8400]
+    - 84 = 4 (bbox) + 80 (class scores)
+    - 8400 = number of anchor boxes
+
+    Args:
+        outputs: Model output tensor [1, 84, 8400] or [84, 8400].
+        origin_shape: Original image shape (H, W, C).
+        class_names: List of class names.
+        conf_thres: Confidence threshold. Defaults to 0.25.
+        iou_thres: IoU threshold for NMS. Defaults to 0.45.
+        max_det: Maximum detections. Defaults to 300.
+
+    Returns:
+        Dictionary containing detection results in JSON format.
+    """
+    
+    # Convert to torch tensor for ultralytics ops
+    if isinstance(outputs, np.ndarray):
+        outputs = torch.from_numpy(outputs)
+    
+    # Ensure shape is [batch, 84, 8400]
+    if outputs.ndim == 2:
+        outputs = outputs.unsqueeze(0)  # [84, 8400] -> [1, 84, 8400]
+    
+    pb_utils.Logger.log_info(f"Output shape before NMS: {outputs.shape}")
+    
+    # Use ultralytics non_max_suppression
+    # Input: [batch, 84, num_boxes] where first 4 are bbox, rest are class scores
+    # Signature: non_max_suppression(prediction, conf_threshold, iou_threshold,
+    #                                 classes, agnostic, max_det)
+    pred = non_max_suppression(
+        outputs,
+        conf_thres,
+        iou_thres,
+        None,  # classes (None = all classes)
+        False,  # agnostic (False = class-aware NMS)
+        max_det=max_det,
+    )
+
+    # pred is a list of tensors, one per batch
+    if len(pred) == 0 or len(pred[0]) == 0:
+        return {"num_detections": 0, "detections": []}
+
+    # Get first batch result: [num_det, 6] format [x1, y1, x2, y2, conf, cls]
+    pred = pred[0].cpu().numpy()
+
+    pb_utils.Logger.log_info(f"After NMS: {len(pred)} detections")
+    if len(pred) > 0:
+        pb_utils.Logger.log_info(
+            f"First box (xyxy on 640x640): {pred[0, :4]}"
+        )
+
+    # Scale boxes back to original image size using ultralytics scale_boxes
+    # Convert back to torch for scale_boxes
+    pred_torch = torch.from_numpy(pred)
+
+    # scale_boxes expects: img1_shape (preprocessed), boxes, img0_shape (original)
+    pred_torch[:, :4] = scale_boxes(
+        INPUT_SHAPE,  # (640, 640)
+        pred_torch[:, :4],  # boxes in xyxy format
+        origin_shape[:2],  # (H, W) of original image
+    )
+
+    pred = pred_torch.numpy()
+
+    # Log scaled boxes for debugging
+    if len(pred) > 0:
+        pb_utils.Logger.log_info(
+            f"Sample box after scaling: {pred[0, :4]}, "
+            f"conf: {pred[0, 4]:.3f}, class: {int(pred[0, 5])}"
+        )
+
+    # Convert to JSON format
+    dets = []
+    for p in pred:
+        cid = int(p[5])
+        dets.append({
+            "bbox": [float(p[0]), float(p[1]), float(p[2]), float(p[3])],
+            "confidence": float(p[4]),
+            "class_id": cid,
+            "class_name": (
+                class_names[cid]
+                if cid < len(class_names)
+                else str(cid)
+            ),
+        })
+
+    return {"num_detections": len(dets), "detections": dets}
+
+
+def decode_and_preprocess(
+    inp: Union[str, bytes, np.ndarray],
+) -> tuple[np.ndarray, tuple[int, int, int]]:
+    """Decode and preprocess input image data using Ultralytics LetterBox.
+
+    Supports multiple input formats:
+    - Base64-encoded strings
+    - Raw bytes
+    - NumPy arrays
+
+    Args:
+        inp: Input data (Base64 string, bytes, or numpy array).
+
+    Returns:
+        Tuple containing:
+            - Preprocessed image tensor [C, H, W] as float32.
+            - Original image shape (H, W, C).
+    """
+    # 1. Robust Data Extraction
+    if isinstance(inp, np.ndarray) and inp.dtype == object:
+        inp = inp.item()
+    
+    # 2. Base64 Decoding
+    if isinstance(inp, str):
+        try:
+            inp = base64.b64decode(inp, validate=True)
+        except Exception as e:
+            pb_utils.Logger.log_error(f"Base64 decode error: {e}")
+            return np.zeros((3, 640, 640), dtype=np.float32), (640, 640, 3)
+    
+    # 3. Convert bytes to numpy array if needed
+    if isinstance(inp, bytes):
+        inp = np.frombuffer(inp, dtype=np.uint8)
+    
+    # 4. Decode image
+    img = cv2.imdecode(inp, cv2.IMREAD_COLOR)
+    if img is None:
+        pb_utils.Logger.log_error("Failed to decode image")
+        return np.zeros((3, 640, 640), dtype=np.float32), (640, 640, 3)
+
+    # 5. Preprocess using Ultralytics LetterBox
+    img_pre = LetterBox(new_shape=INPUT_SHAPE, auto=False, stride=32)(image=img)
+    
+    # Convert to CHW format and normalize
+    img_pre = img_pre.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+    img_pre = np.ascontiguousarray(img_pre, dtype=np.float32) / 255.0
+    
+    return img_pre, img.shape
 
 
 class TritonPythonModel:
-    def initialize(self, args):
-        """`initialize` is called only once when the model is being loaded.
+    """Pipelined Triton Python Model for YOLOv11 with RBLN Runtime.
 
-        Parameters
-        ----------
-        args : dict
-          Both keys and values are strings. The dictionary keys and values are:
-          * model_config: A JSON string containing the model configuration
-          * model_instance_kind: A string containing model instance kind
-          * model_instance_device_id: A string containing model instance device ID
-          * model_instance_name: A string containing model instance name in form of <model_name>_<instance_group_id>_<instance_id>
-          * model_repository: Model repository path
-          * model_version: Model version
-          * model_name: Model name
+    Implements a three-stage pipeline:
+    1. Preprocessing (CPU): Decode and resize images
+    2. Inference (NPU): Run YOLOv11 model
+    3. Postprocessing (CPU): NMS and JSON conversion
+
+    Attributes:
+        model_config: Parsed model configuration.
+        module: RBLN runtime module.
+        request_queue: Queue for incoming requests.
+        infer_queue: Queue for preprocessed images.
+        post_queue: Queue for inference outputs.
+        shutdown_event: Event to signal shutdown.
+        threads: List of worker threads.
+    """
+
+    def initialize(self, args: dict[str, Any]) -> None:
+        """Initialize the model.
+
+        Sets up RBLN runtime, queues, and worker threads for pipelined
+        inference.
+
+        Args:
+            args: Model initialization arguments from Triton.
         """
+        self.model_config = json.loads(args["model_config"])
 
-        self.model_config = model_config = json.loads(args["model_config"])
-        output0_config = pb_utils.get_output_config_by_name(model_config, "OUTPUT__0")
-        self.output0_dtype = pb_utils.triton_string_to_numpy(
-            output0_config["data_type"]
-        )
-
-        # Path to rbln compiled model file
-        rbln_path = os.path.join(
-            args["model_repository"],
-            args["model_version"],
-            f"{args['model_name']}.rbln",
-        )
-
-        inst_name = args.get("model_instance_name", "")
-        m = NAME_RE.match(inst_name)
-        if not m:
-            raise RuntimeError(f"Unexpected model_instance_name: {inst_name}")
-
+        # Model Setup
+        model_dir = Path(args["model_repository"]) / args["model_version"]
+        rbln_path = model_dir / f"{args['model_name']}.rbln"
+        m = NAME_RE.match(args["model_instance_name"])
+        if m is None:
+            raise ValueError(
+                f"Invalid model instance name: {args['model_instance_name']}"
+            )
         device_id = int(m.group("group"))
 
-        #Triton logger generation for debug
+        # RBLN Runtime
+        self.module = rebel.Runtime(str(rbln_path), device=device_id)
+
+        # Queues for Pipelining
+        self.request_queue: queue.Queue[Any] = queue.Queue(maxsize=256)
+        self.infer_queue: queue.Queue[tuple[np.ndarray, tuple[int, int, int], Any]] = queue.Queue(maxsize=64)
+        self.post_queue: queue.Queue[tuple[np.ndarray, tuple[int, int, int], Any]] = queue.Queue(maxsize=64)
+
+        # Workers
+        self.shutdown_event = threading.Event()
+        self.threads: list[threading.Thread] = []
+
+        # [Stage 1] Preprocessing Workers (CPU)
+        for _ in range(1):
+            t = threading.Thread(target=self.preprocessing_loop)
+            t.start()
+            self.threads.append(t)
+
+        # [Stage 2] Inference Worker (NPU)
+        t_inf = threading.Thread(target=self.inference_loop)
+        t_inf.start()
+        self.threads.append(t_inf)
+
+        # [Stage 3] Postprocessing Workers (CPU)
+        for _ in range(1):
+            t = threading.Thread(target=self.postprocessing_loop)
+            t.start()
+            self.threads.append(t)
+
         pb_utils.Logger.log_info(
-            f"[{inst_name}] -> RBLN_DEVICE={device_id}"
+            f"Pipeline Initialized on Device {device_id}"
         )
 
-        # Create rbln runtime module
-        self.module = rebel.Runtime(rbln_path, device=device_id)
-        # Minimal threads since inference is hardware-bound, not CPU-bound
-        self.module.num_threads = 8
-        
-        # Performance tracking
-        self.inst_name = inst_name
-        self.request_count = 0
-        self.total_time = 0
-        self.inference_time = 0
-        self.data_prep_time = 0
-        self.response_time = 0
-        self.last_log_time = time.time()
+    def execute(self, requests: list[Any]) -> None:
+        """Execute inference requests (Decoupled Mode).
 
-    def execute(self, requests):
-        """`execute` MUST be implemented in every Python model. `execute`
-        function receives a list of pb_utils.InferenceRequest as the only
-        argument. This function is called when an inference request is made
-        for this model. Depending on the batching configuration (e.g. Dynamic
-        Batching) used, `requests` may contain multiple requests. Every
-        Python model, must create one pb_utils.InferenceResponse for every
-        pb_utils.InferenceRequest in `requests`. If there is an error, you can
-        set the error argument when creating a pb_utils.InferenceResponse
+        In decoupled mode, requests are queued and function returns immediately.
+        Responses are sent asynchronously through the pipeline.
 
-        Parameters
-        ----------
-        requests : list
-          A list of pb_utils.InferenceRequest
-
-        Returns
-        -------
-        list
-          A list of pb_utils.InferenceResponse. The length of this list must
-          be the same as `requests`
+        Args:
+            requests: List of inference requests.
         """
-        start_total = time.perf_counter()
-        output0_dtype = self.output0_dtype
-        responses = []
-
+        # Decoupled mode: queue requests and return immediately
         for request in requests:
-            # Data preparation timing
-            t0 = time.perf_counter()
-            in_0 = pb_utils.get_input_tensor_by_name(request, "INPUT__0")
-            input_data = in_0.as_numpy()
-            t1 = time.perf_counter()
-            self.data_prep_time += (t1 - t0)
+            self.request_queue.put(request)
+        return None
 
-            # Run inference timing
-            t2 = time.perf_counter()
-            result = self.module.run(input_data)
-            t3 = time.perf_counter()
-            self.inference_time += (t3 - t2)
+    def preprocessing_loop(self) -> None:
+        """Stage 1: CPU preprocessing loop (Decode & Resize).
 
-            # Response creation timing
-            t4 = time.perf_counter()
-            out_tensor_0 = pb_utils.Tensor("OUTPUT__0", result[0].astype(output0_dtype))
-            inference_response = pb_utils.InferenceResponse(
-                output_tensors=[out_tensor_0]
-            )
-            responses.append(inference_response)
-            t5 = time.perf_counter()
-            self.response_time += (t5 - t4)
+        Continuously processes requests from request_queue, decodes images,
+        and preprocesses them using LetterBox. Results are sent to
+        infer_queue.
+        """
+        while not self.shutdown_event.is_set():
+            try:
+                req = self.request_queue.get(timeout=0.01)
+            except queue.Empty:
+                continue
+            
+            try:
+                inp_tensor = pb_utils.get_input_tensor_by_name(req, "INPUT__0")
+                if inp_tensor is None:
+                    continue
 
-        end_total = time.perf_counter()
-        self.total_time += (end_total - start_total)
-        self.request_count += len(requests)
-
-        # Log performance stats every 5 seconds
-        current_time = time.time()
-        if current_time - self.last_log_time >= 5.0:
-            if self.request_count > 0:
-                avg_total = (self.total_time / self.request_count) * 1000
-                avg_inference = (self.inference_time / self.request_count) * 1000
-                avg_data_prep = (self.data_prep_time / self.request_count) * 1000
-                avg_response = (self.response_time / self.request_count) * 1000
+                sender = req.get_response_sender()
+                input_np = inp_tensor.as_numpy()
                 
-                pb_utils.Logger.log_info(
-                    f"[{self.inst_name}] Performance Stats (ms/request): "
-                    f"Total={avg_total:.2f}, Inference={avg_inference:.2f}, "
-                    f"DataPrep={avg_data_prep:.2f}, Response={avg_response:.2f}, "
-                    f"Requests={self.request_count}, RPS={self.request_count/5.0:.1f}"
+                if input_np.dtype == object:
+                    raw_data = input_np[0]
+                else:
+                    raw_data = input_np if input_np.ndim == 1 else input_np[0]
+                        
+                # CPU preprocessing
+                img_pre, shape = decode_and_preprocess(raw_data)
+
+                # Pass to next stage
+                self.infer_queue.put((img_pre, shape, sender))
+
+            except Exception as e:
+                pb_utils.Logger.log_error(f"Prep Error: {e}")
+                if 'sender' in locals():
+                    error_response = pb_utils.InferenceResponse(
+                        error=pb_utils.TritonError(str(e))
+                    )
+                    sender.send(error_response, flags=pb_utils.TRITONSERVER_RESPONSE_COMPLETE_FINAL)
+
+    def inference_loop(self) -> None:
+        """Stage 2: NPU inference loop.
+
+        Continuously processes preprocessed images from infer_queue,
+        runs inference on NPU, and sends results to post_queue.
+        """
+        while not self.shutdown_event.is_set():
+            try:
+                data = self.infer_queue.get(timeout=0.01)
+            except queue.Empty:
+                continue
+
+            img_pre, shape, sender = data
+
+            try:
+                # Expand batch dimension: [C, H, W] -> [1, C, H, W]
+                input_tensor = np.expand_dims(img_pre, axis=0)
+
+                # Run NPU inference
+                outputs = self.module.run(input_tensor)
+
+                if isinstance(outputs, (list, tuple)):
+                    outputs = outputs[0]
+
+                # Remove batch dimension: [1, 84, 8400] -> [84, 8400]
+                if outputs.ndim == 3 and outputs.shape[0] == 1:
+                    outputs = outputs[0]
+
+                # Pass to next stage
+                self.post_queue.put((outputs, shape, sender))
+
+            except Exception as e:
+                pb_utils.Logger.log_error(f"Infer Error: {e}")
+                error_response = pb_utils.InferenceResponse(
+                    error=pb_utils.TritonError(str(e))
                 )
-                
-                # Reset counters
-                self.request_count = 0
-                self.total_time = 0
-                self.inference_time = 0
-                self.data_prep_time = 0
-                self.response_time = 0
-                self.last_log_time = current_time
+                sender.send(
+                    error_response,
+                    flags=pb_utils.TRITONSERVER_RESPONSE_COMPLETE_FINAL,
+                )
 
-        return responses
+    def postprocessing_loop(self) -> None:
+        """Stage 3: CPU postprocessing loop (NMS & Response Send).
+
+        Continuously processes inference outputs from post_queue,
+        applies NMS, converts to JSON, and sends responses.
+        """
+        # Load class names (COCO 80 classes)
+        class_names = [str(i) for i in range(80)]
+
+        while not self.shutdown_event.is_set():
+            try:
+                data = self.post_queue.get(timeout=0.01)
+            except queue.Empty:
+                continue
+
+            outputs, shape, sender = data
+
+            try:
+                # NMS and JSON conversion (using Ultralytics functions)
+                result_json = postprocess_to_json(
+                    outputs,
+                    shape,
+                    class_names,
+                    conf_thres=0.25,
+                    iou_thres=0.45,
+                    max_det=300,
+                )
+
+                # Encode JSON to bytes
+                out_tensor = pb_utils.Tensor(
+                    "OUTPUT__0",
+                    np.array(
+                        [json.dumps(result_json).encode("utf-8")],
+                        dtype=np.bytes_,
+                    ),
+                )
+
+                # Send response
+                response = pb_utils.InferenceResponse(
+                    output_tensors=[out_tensor]
+                )
+                sender.send(response)
+                sender.send(flags=pb_utils.TRITONSERVER_RESPONSE_COMPLETE_FINAL)
+
+            except Exception as e:
+                pb_utils.Logger.log_error(f"Post Error: {e}")
+                error_response = pb_utils.InferenceResponse(
+                    error=pb_utils.TritonError(str(e))
+                )
+                sender.send(
+                    error_response,
+                    flags=pb_utils.TRITONSERVER_RESPONSE_COMPLETE_FINAL,
+                )
+
+    def finalize(self) -> None:
+        """Finalize the model.
+
+        Signals shutdown to all worker threads and waits for them to finish.
+        """
+        self.shutdown_event.set()
+        for t in self.threads:
+            t.join()

@@ -63,3 +63,8 @@ nohup.out
 *.temp
 *.bak
 
+# Client folders (only available in jpeg-byte branch)
+# Uncomment these lines in main/master branch to exclude clients
+# client/python_client/
+# client/cpp_client/
+

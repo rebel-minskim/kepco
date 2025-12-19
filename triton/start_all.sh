@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# Start All Services Script for Kepco Triton Inference Server
+# This script starts the Triton Inference Server with the configured backend
+
+set -e
+
+# Get the directory where the script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Load environment variables from .env if it exists
+if [ -f .env ]; then
+    echo "Loading environment variables from .env..."
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Default configuration
+TRITON_HTTP_PORT=${TRITON_HTTP_PORT:-8000}
+TRITON_GRPC_PORT=${TRITON_GRPC_PORT:-8001}
+TRITON_METRICS_PORT=${TRITON_METRICS_PORT:-8002}
+MODEL_REPOSITORY=${MODEL_REPOSITORY:-./rbln_backend}
+BACKEND_TYPE=${BACKEND_TYPE:-rbln}
+LOG_VERBOSE=${LOG_VERBOSE:-1}
+
+# Determine model repository based on backend type
+if [ "$BACKEND_TYPE" = "gpu" ]; then
+    MODEL_REPOSITORY="./gpu_backend"
+    echo "Using GPU backend (PyTorch)"
+elif [ "$BACKEND_TYPE" = "rbln" ]; then
+    MODEL_REPOSITORY="./rbln_backend"
+    echo "Using NPU backend (RBLN)"
+else
+    echo "Warning: Unknown BACKEND_TYPE '$BACKEND_TYPE'. Using default: rbln"
+    MODEL_REPOSITORY="./rbln_backend"
+fi
+
+# Check if model repository exists
+if [ ! -d "$MODEL_REPOSITORY" ]; then
+    echo "Error: Model repository not found: $MODEL_REPOSITORY"
+    echo "Please ensure the model repository exists or set MODEL_REPOSITORY environment variable"
+    exit 1
+fi
+
+# Find tritonserver executable
+TRITON_SERVER_BIN=""
+if command -v tritonserver &> /dev/null; then
+    TRITON_SERVER_BIN="tritonserver"
+elif [ -f "/opt/tritonserver/bin/tritonserver" ]; then
+    TRITON_SERVER_BIN="/opt/tritonserver/bin/tritonserver"
+elif [ -f "/usr/local/bin/tritonserver" ]; then
+    TRITON_SERVER_BIN="/usr/local/bin/tritonserver"
+else
+    echo "Error: tritonserver command not found"
+    echo "Please install NVIDIA Triton Inference Server"
+    echo "See: https://github.com/triton-inference-server/server"
+    echo ""
+    echo "Common installation paths checked:"
+    echo "  - PATH: $(command -v tritonserver 2>/dev/null || echo 'not found')"
+    echo "  - /opt/tritonserver/bin/tritonserver"
+    echo "  - /usr/local/bin/tritonserver"
+    exit 1
+fi
+
+echo "=========================================="
+echo "Starting Triton Inference Server"
+echo "=========================================="
+echo "Model Repository: $MODEL_REPOSITORY"
+echo "HTTP Port: $TRITON_HTTP_PORT"
+echo "gRPC Port: $TRITON_GRPC_PORT"
+echo "Metrics Port: $TRITON_METRICS_PORT"
+echo "Backend Type: $BACKEND_TYPE"
+echo "Log Verbose: $LOG_VERBOSE"
+echo "=========================================="
+echo ""
+
+# Start Triton server
+# Note: --disable-auto-complete-config is a flag (no value)
+# If you want to disable auto-complete, remove the line or set DISABLE_AUTO_COMPLETE=true
+TRITON_ARGS=(
+    --model-repository="$MODEL_REPOSITORY"
+    --http-port="$TRITON_HTTP_PORT"
+    --grpc-port="$TRITON_GRPC_PORT"
+    --metrics-port="$TRITON_METRICS_PORT"
+    --log-verbose="$LOG_VERBOSE"
+    --exit-on-error=false
+)
+
+# Add --disable-auto-complete-config flag only if DISABLE_AUTO_COMPLETE is true
+if [ "${DISABLE_AUTO_COMPLETE:-false}" = "true" ]; then
+    TRITON_ARGS+=(--disable-auto-complete-config)
+fi
+
+"$TRITON_SERVER_BIN" "${TRITON_ARGS[@]}"
+
