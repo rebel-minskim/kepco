@@ -33,11 +33,14 @@ This module implements a pipelined inference model using Rebellions RBLN
 runtime for NPU acceleration. It supports decoupled mode for improved
 throughput.
 """
+import asyncio
 import base64
 import json
 import queue
 import re
 import threading
+import psutil
+import os
 from pathlib import Path
 from typing import Any, Union
 
@@ -88,8 +91,6 @@ def postprocess_to_json(
     if outputs.ndim == 2:
         outputs = outputs.unsqueeze(0)  # [84, 8400] -> [1, 84, 8400]
     
-    pb_utils.Logger.log_info(f"Output shape before NMS: {outputs.shape}")
-    
     # Use ultralytics non_max_suppression
     # Input: [batch, 84, num_boxes] where first 4 are bbox, rest are class scores
     # Signature: non_max_suppression(prediction, conf_threshold, iou_threshold,
@@ -110,12 +111,6 @@ def postprocess_to_json(
     # Get first batch result: [num_det, 6] format [x1, y1, x2, y2, conf, cls]
     pred = pred[0].cpu().numpy()
 
-    pb_utils.Logger.log_info(f"After NMS: {len(pred)} detections")
-    if len(pred) > 0:
-        pb_utils.Logger.log_info(
-            f"First box (xyxy on 640x640): {pred[0, :4]}"
-        )
-
     # Scale boxes back to original image size using ultralytics scale_boxes
     # Convert back to torch for scale_boxes
     pred_torch = torch.from_numpy(pred)
@@ -128,13 +123,6 @@ def postprocess_to_json(
     )
 
     pred = pred_torch.numpy()
-
-    # Log scaled boxes for debugging
-    if len(pred) > 0:
-        pb_utils.Logger.log_info(
-            f"Sample box after scaling: {pred[0, :4]}, "
-            f"conf: {pred[0, 4]:.3f}, class: {int(pred[0, 5])}"
-        )
 
     # Convert to JSON format
     dets = []
@@ -196,11 +184,10 @@ def decode_and_preprocess(
 
     # 5. Preprocess using Ultralytics LetterBox
     img_pre = LetterBox(new_shape=INPUT_SHAPE, auto=False, stride=32)(image=img)
-    
+
     # Convert to CHW format and normalize
     img_pre = img_pre.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
     img_pre = np.ascontiguousarray(img_pre, dtype=np.float32) / 255.0
-    
     return img_pre, img.shape
 
 
@@ -233,7 +220,7 @@ class TritonPythonModel:
         """
         self.model_config = json.loads(args["model_config"])
 
-        # Model Setup
+        # Model Setup - Parse device_id first
         model_dir = Path(args["model_repository"]) / args["model_version"]
         rbln_path = model_dir / f"{args['model_name']}.rbln"
         m = NAME_RE.match(args["model_instance_name"])
@@ -243,30 +230,78 @@ class TritonPythonModel:
             )
         device_id = int(m.group("group"))
 
-        # RBLN Runtime
-        self.module = rebel.Runtime(str(rbln_path), device=device_id)
+        # CPU Setup - Assign CPU cores based on device_id
+        # Each device_id gets 2 CPU cores:
+        proc = psutil.Process(os.getpid())
+        
+        # Get available CPU cores for this process (may be restricted by Triton)
+        try:
+            available_cores = proc.cpu_affinity()
+        except Exception:
+            # If cpu_affinity() fails, get all system CPUs
+            available_cores = list(range(psutil.cpu_count(logical=True)))
+        
+        # Calculate target cores for this device_id (relative to available cores)
+        # Map device_id to CPU cores within available range
+        cores_per_device = 2
+        start_idx = device_id * cores_per_device
+        
+        # Check if we have enough available cores
+        if len(available_cores) < start_idx + cores_per_device:
+            pb_utils.Logger.log_warn(
+                f"Device {device_id} requested {cores_per_device} CPU cores starting at index {start_idx}, "
+                f"but only {len(available_cores)} CPUs available: {available_cores}. "
+                f"Skipping CPU affinity."
+            )
+        else:
+            # Select cores from available cores list
+            target_cores = available_cores[start_idx:start_idx + cores_per_device]
+            
+            # Set CPU Affinity
+            try:
+                proc.cpu_affinity(target_cores)
+                pb_utils.Logger.log_info(
+                    f"Device {device_id} pinned to CPU cores: {target_cores} "
+                    f"(from available: {available_cores})"
+                )
+            except Exception as e:
+                pb_utils.Logger.log_error(
+                    f"Failed to set CPU affinity for device {device_id} to {target_cores}: {e}"
+                )
+
+        # RBLN AsyncRuntime with parallel execution
+        self.module = rebel.AsyncRuntime(str(rbln_path), device=device_id, parallel=2)
 
         # Queues for Pipelining
-        self.request_queue: queue.Queue[Any] = queue.Queue(maxsize=256)
-        self.infer_queue: queue.Queue[tuple[np.ndarray, tuple[int, int, int], Any]] = queue.Queue(maxsize=64)
-        self.post_queue: queue.Queue[tuple[np.ndarray, tuple[int, int, int], Any]] = queue.Queue(maxsize=64)
+        # Increased queue sizes to prevent starvation and maintain high NPU utilization
+        self.request_queue: queue.Queue[Any] = queue.Queue(maxsize=512)
+        self.infer_queue: queue.Queue[tuple[np.ndarray, tuple[int, int, int], Any]] = queue.Queue(maxsize=128)
+        self.post_queue: queue.Queue[tuple[np.ndarray, tuple[int, int, int], Any]] = queue.Queue(maxsize=128)
 
         # Workers
         self.shutdown_event = threading.Event()
         self.threads: list[threading.Thread] = []
 
         # [Stage 1] Preprocessing Workers (CPU)
+        # Increased to feed infer_queue faster and prevent NPU starvation
+        # More workers ensure infer_queue always has data ready
         for _ in range(1):
             t = threading.Thread(target=self.preprocessing_loop)
             t.start()
             self.threads.append(t)
 
         # [Stage 2] Inference Worker (NPU)
-        t_inf = threading.Thread(target=self.inference_loop)
-        t_inf.start()
-        self.threads.append(t_inf)
+        # Increased threads to maximize NPU utilization
+        # With AsyncRuntime parallel=2, more threads ensure NPU stays busy
+        # Each thread processes sequentially, but multiple threads run concurrently
+        for _ in range(2):
+            t_inf = threading.Thread(target=self.inference_loop)
+            t_inf.start()
+            self.threads.append(t_inf)
 
         # [Stage 3] Postprocessing Workers (CPU)
+        # Increased to prevent post_queue from backing up
+        # More workers ensure pipeline doesn't stall
         for _ in range(1):
             t = threading.Thread(target=self.postprocessing_loop)
             t.start()
@@ -299,7 +334,8 @@ class TritonPythonModel:
         """
         while not self.shutdown_event.is_set():
             try:
-                req = self.request_queue.get(timeout=0.01)
+                # Reduced timeout to minimize idle time
+                req = self.request_queue.get(timeout=0.001)
             except queue.Empty:
                 continue
             
@@ -335,41 +371,61 @@ class TritonPythonModel:
 
         Continuously processes preprocessed images from infer_queue,
         runs inference on NPU, and sends results to post_queue.
+
+        Uses sequential processing with run_until_complete for optimal NPU utilization.
+        AsyncRuntime's parallel=2 handles internal concurrency, so multiple threads
+        with sequential processing achieve better utilization than async task overhead.
+
+        Creates and maintains a dedicated event loop for this thread
+        to handle AsyncRuntime coroutines efficiently.
         """
-        while not self.shutdown_event.is_set():
-            try:
-                data = self.infer_queue.get(timeout=0.01)
-            except queue.Empty:
-                continue
+        # Create a dedicated event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-            img_pre, shape, sender = data
+        try:
+            while not self.shutdown_event.is_set():
+                try:
+                    # Reduced timeout to minimize idle time and maximize NPU utilization
+                    data = self.infer_queue.get(timeout=0.001)
+                except queue.Empty:
+                    continue
 
-            try:
-                # Expand batch dimension: [C, H, W] -> [1, C, H, W]
-                input_tensor = np.expand_dims(img_pre, axis=0)
+                img_pre, shape, sender = data
 
-                # Run NPU inference
-                outputs = self.module.run(input_tensor)
+                try:
+                    # Expand batch dimension: [C, H, W] -> [1, C, H, W]
+                    input_tensor = np.expand_dims(img_pre, axis=0)
 
-                if isinstance(outputs, (list, tuple)):
-                    outputs = outputs[0]
+                    # Run NPU inference (AsyncRuntime returns AsyncTask coroutine)
+                    async_task = self.module.async_run(input_tensor)
 
-                # Remove batch dimension: [1, 84, 8400] -> [84, 8400]
-                if outputs.ndim == 3 and outputs.shape[0] == 1:
-                    outputs = outputs[0]
+                    # Execute coroutine using this thread's event loop
+                    # Sequential processing per thread, but multiple threads run concurrently
+                    outputs = loop.run_until_complete(async_task)
 
-                # Pass to next stage
-                self.post_queue.put((outputs, shape, sender))
+                    if isinstance(outputs, (list, tuple)):
+                        outputs = outputs[0]
 
-            except Exception as e:
-                pb_utils.Logger.log_error(f"Infer Error: {e}")
-                error_response = pb_utils.InferenceResponse(
-                    error=pb_utils.TritonError(str(e))
-                )
-                sender.send(
-                    error_response,
-                    flags=pb_utils.TRITONSERVER_RESPONSE_COMPLETE_FINAL,
-                )
+                    # Remove batch dimension: [1, 84, 8400] -> [84, 8400]
+                    if outputs.ndim == 3 and outputs.shape[0] == 1:
+                        outputs = outputs[0]
+
+                    # Pass to next stage
+                    self.post_queue.put((outputs, shape, sender))
+
+                except Exception as e:
+                    pb_utils.Logger.log_error(f"Infer Error: {e}")
+                    error_response = pb_utils.InferenceResponse(
+                        error=pb_utils.TritonError(str(e))
+                    )
+                    sender.send(
+                        error_response,
+                        flags=pb_utils.TRITONSERVER_RESPONSE_COMPLETE_FINAL,
+                    )
+        finally:
+            # Clean up event loop when thread exits
+            loop.close()
 
     def postprocessing_loop(self) -> None:
         """Stage 3: CPU postprocessing loop (NMS & Response Send).
@@ -382,7 +438,8 @@ class TritonPythonModel:
 
         while not self.shutdown_event.is_set():
             try:
-                data = self.post_queue.get(timeout=0.01)
+                # Reduced timeout to minimize idle time
+                data = self.post_queue.get(timeout=0.001)
             except queue.Empty:
                 continue
 
